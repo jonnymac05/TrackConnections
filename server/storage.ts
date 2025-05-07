@@ -13,6 +13,9 @@ import {
   InsertMessageTemplate,
   ContactPerson,
   LogEntryWithRelations,
+  Contact,
+  InsertContact,
+  ContactWithRelations
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -62,8 +65,18 @@ export interface IStorage {
   createOrUpdateMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate>;
   
   // Contact methods
+  // Legacy contact methods (deprecated)
   getContacts(userId: string): Promise<ContactPerson[]>;
   getContactById(id: string): Promise<ContactPerson | undefined>;
+  
+  // New contact methods
+  getAllContacts(userId: string): Promise<ContactWithRelations[]>;
+  getContactByIdNew(id: string): Promise<ContactWithRelations | undefined>;
+  createContact(contact: InsertContact): Promise<Contact>;
+  updateContact(id: string, contactData: Partial<Contact>): Promise<Contact | undefined>;
+  deleteContact(id: string): Promise<boolean>;
+  getFavoriteContacts(userId: string): Promise<ContactWithRelations[]>;
+  toggleFavoriteContact(id: string, isFavorite: boolean): Promise<Contact | undefined>;
   
   // Search method
   searchLogEntries(userId: string, query: string): Promise<LogEntryWithRelations[]>;
@@ -79,6 +92,7 @@ export class MemStorage implements IStorage {
   private logEntriesTags: Map<string, LogEntryTag>;
   private mediaItems: Map<string, Media>;
   private messageTemplates: Map<string, MessageTemplate>;
+  private contacts: Map<string, Contact>;
   sessionStore: session.Store;
 
   constructor() {
@@ -88,6 +102,7 @@ export class MemStorage implements IStorage {
     this.logEntriesTags = new Map();
     this.mediaItems = new Map();
     this.messageTemplates = new Map();
+    this.contacts = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // Prune expired entries every 24h
@@ -494,6 +509,97 @@ export class MemStorage implements IStorage {
   async getContactById(id: string): Promise<ContactPerson | undefined> {
     const contacts = await this.getContacts(id.split(':')[0]); // Extract user ID from contact ID
     return contacts.find(contact => contact.id === id);
+  }
+
+  // New contact methods
+  async getAllContacts(userId: string): Promise<ContactWithRelations[]> {
+    return Array.from(this.contacts.values())
+      .filter(contact => contact.user_id === userId)
+      .sort((a, b) => {
+        const nameA = a.name || '';
+        const nameB = b.name || '';
+        return nameA.localeCompare(nameB);
+      })
+      .map(contact => this.enrichContact(contact));
+  }
+
+  async getContactByIdNew(id: string): Promise<ContactWithRelations | undefined> {
+    const contact = this.contacts.get(id);
+    if (!contact) return undefined;
+    
+    return this.enrichContact(contact);
+  }
+
+  async createContact(contactData: InsertContact): Promise<Contact> {
+    const timestamp = new Date();
+    const id = uuidv4();
+    const contact: Contact = {
+      id,
+      ...contactData,
+      is_favorite: contactData.is_favorite || false,
+      created_at: timestamp,
+      updated_at: timestamp
+    };
+    
+    this.contacts.set(id, contact);
+    return contact;
+  }
+
+  async updateContact(id: string, contactData: Partial<Contact>): Promise<Contact | undefined> {
+    const contact = this.contacts.get(id);
+    if (!contact) return undefined;
+    
+    const updatedContact: Contact = {
+      ...contact,
+      ...contactData,
+      updated_at: new Date()
+    };
+    
+    this.contacts.set(id, updatedContact);
+    return updatedContact;
+  }
+
+  async deleteContact(id: string): Promise<boolean> {
+    return this.contacts.delete(id);
+  }
+
+  async getFavoriteContacts(userId: string): Promise<ContactWithRelations[]> {
+    return Array.from(this.contacts.values())
+      .filter(contact => contact.user_id === userId && contact.is_favorite)
+      .sort((a, b) => {
+        const nameA = a.name || '';
+        const nameB = b.name || '';
+        return nameA.localeCompare(nameB);
+      })
+      .map(contact => this.enrichContact(contact));
+  }
+
+  async toggleFavoriteContact(id: string, isFavorite: boolean): Promise<Contact | undefined> {
+    const contact = this.contacts.get(id);
+    if (!contact) return undefined;
+    
+    const updatedContact: Contact = {
+      ...contact,
+      is_favorite: isFavorite,
+      updated_at: new Date()
+    };
+    
+    this.contacts.set(id, updatedContact);
+    return updatedContact;
+  }
+
+  // Helper method to enrich a contact with its related data
+  private enrichContact(contact: Contact): ContactWithRelations {
+    const logEntries = Array.from(this.logEntries.values())
+      .filter(entry => entry.contact_id === contact.id)
+      .sort((a, b) => {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    
+    return {
+      ...contact,
+      logEntries
+    };
   }
 
   // Search method

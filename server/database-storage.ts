@@ -3,7 +3,8 @@ import {
   User, InsertUser, LogEntry, InsertLogEntry, Tag, InsertTag,
   LogEntryTag, InsertLogEntryTag, Media, InsertMedia,
   MessageTemplate, InsertMessageTemplate, LogEntryWithRelations,
-  ContactPerson, connectUsers, logEntries, tags, logEntriesTags, media, messageTemplates
+  ContactPerson, connectUsers, logEntries, tags, logEntriesTags, media, messageTemplates,
+  contacts, Contact, InsertContact, ContactWithRelations
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { eq, and, like, or } from "drizzle-orm";
