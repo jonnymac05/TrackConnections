@@ -86,7 +86,7 @@
 }
 
 .nav-item {
-  @apply flex flex-col items-center justify-center w-full h-full text-xs text-muted-foreground hover:text-primary transition-colors;
+  @apply flex flex-col items-center justify-center w-full h-full text-xs text-muted-foreground hover:text-primary transition-colors px-4;
 }
 
 .nav-item.active {

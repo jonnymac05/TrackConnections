@@ -1,6 +1,7 @@
 import { pgTable, text, uuid, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Users table
 export const connectUsers = pgTable("connect_users", {
@@ -58,6 +59,21 @@ export const media = pgTable("media", {
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Contacts table
+export const contacts = pgTable("contacts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  created_by: uuid("created_by").notNull().references(() => connectUsers.id),
+  name: text("name"),
+  company: text("company"),
+  title: text("title"),
+  email: text("email"),
+  phone: text("phone"),
+  notes: text("notes"),
+  is_favorite: boolean("is_favorite").default(false),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // User message templates
 export const messageTemplates = pgTable("message_templates", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -68,6 +84,24 @@ export const messageTemplates = pgTable("message_templates", {
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Define relationships
+export const contactRelations = relations(contacts, ({ one, many }) => ({
+  user: one(connectUsers, {
+    fields: [contacts.created_by],
+    references: [connectUsers.id],
+  }),
+  logEntries: many(logEntries),
+}));
+
+export const logEntryRelations = relations(logEntries, ({ one, many }) => ({
+  user: one(connectUsers, {
+    fields: [logEntries.user_id],
+    references: [connectUsers.id],
+  }),
+  tags: many(logEntriesTags),
+  media: many(media),
+}));
+
 // Zod schemas for insertions
 export const insertUserSchema = createInsertSchema(connectUsers).omit({
   id: true,
@@ -76,6 +110,12 @@ export const insertUserSchema = createInsertSchema(connectUsers).omit({
 });
 
 export const insertLogEntrySchema = createInsertSchema(logEntries).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertContactSchema = createInsertSchema(contacts).omit({
   id: true,
   created_at: true,
   updated_at: true,
@@ -111,6 +151,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LogEntry = typeof logEntries.$inferSelect;
 export type InsertLogEntry = z.infer<typeof insertLogEntrySchema>;
 
+export type Contact = typeof contacts.$inferSelect;
+export type InsertContact = z.infer<typeof insertContactSchema>;
+
 export type Tag = typeof tags.$inferSelect;
 export type InsertTag = z.infer<typeof insertTagSchema>;
 
@@ -129,13 +172,6 @@ export type LogEntryWithRelations = LogEntry & {
   media?: Media[];
 };
 
-export type ContactPerson = {
-  id: string;
-  name?: string | null;
-  company?: string | null;
-  title?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  logEntries: LogEntry[];
-  tags?: Tag[];
+export type ContactWithRelations = Contact & {
+  logEntries?: LogEntry[];
 };
