@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
+import LoginPage from "@/pages/login-page";
+import RegisterPage from "@/pages/register-page";
 import LandingPage from "@/pages/landing-page";
 import ContactListPage from "@/pages/contact-list-page";
 import ContactDetailPage from "@/pages/contact-detail-page";
