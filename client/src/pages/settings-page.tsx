@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { MobileNav } from "@/components/mobile-nav";
+import { UserMenu } from "@/components/user-menu";
 import { FormDialog } from "@/components/form-dialog";
 import { LogForm } from "@/components/forms/log-form";
 import { useAuth } from "@/hooks/use-auth";
@@ -96,8 +97,9 @@ export default function SettingsPage() {
       <div className="mobile-container">
         {/* Header */}
         <header className="sticky top-0 bg-background border-b border-border z-10">
-          <div className="p-4">
+          <div className="p-4 flex justify-between items-center">
             <h1 className="text-xl font-semibold text-foreground">Settings</h1>
+            <UserMenu />
           </div>
         </header>
         

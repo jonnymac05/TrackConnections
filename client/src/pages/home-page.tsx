@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { LogEntryWithRelations, Tag } from "@shared/schema";
 import { LogEntryCard } from "@/components/log-entry-card";
 import { MobileNav } from "@/components/mobile-nav";
+import { UserMenu } from "@/components/user-menu";
 import { FormDialog } from "@/components/form-dialog";
 import { LogForm } from "@/components/forms/log-form";
 import { useAuth } from "@/hooks/use-auth";
@@ -130,6 +131,8 @@ export default function HomePage() {
               >
                 <Filter className="h-5 w-5" />
               </Button>
+              {/* User Menu */}
+              <UserMenu />
             </div>
           </div>
           
