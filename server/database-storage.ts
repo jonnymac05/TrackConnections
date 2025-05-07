@@ -587,10 +587,24 @@ export class DatabaseStorage implements IStorage {
       .from(media)
       .where(eq(media.log_entry_id, entry.id));
     
+    // Get associated contact if any
+    let contactData = undefined;
+    if (entry.contact_id) {
+      const [contact] = await db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, entry.contact_id));
+      
+      if (contact) {
+        contactData = contact;
+      }
+    }
+    
     return {
       ...entry,
       tags: entryTagsData,
-      media: entryMedia
+      media: entryMedia,
+      contact: contactData
     };
   }
 }

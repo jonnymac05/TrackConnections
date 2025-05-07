@@ -594,10 +594,17 @@ export class MemStorage implements IStorage {
     // Get media for this entry
     const media = await this.getMediaForLogEntry(entry.id);
     
+    // Get associated contact if any
+    let contact = undefined;
+    if (entry.contact_id) {
+      contact = this.contacts.get(entry.contact_id);
+    }
+    
     return {
       ...entry,
       tags: tags.filter(Boolean) as Tag[],
-      media
+      media,
+      contact: contact
     };
   }
 }

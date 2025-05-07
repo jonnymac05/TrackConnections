@@ -16,10 +16,26 @@ export const connectUsers = pgTable("connect_users", {
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Contacts table
+export const contacts = pgTable("contacts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  created_by: uuid("created_by").notNull().references(() => connectUsers.id),
+  name: text("name"),
+  company: text("company"),
+  title: text("title"),
+  email: text("email"),
+  phone: text("phone"),
+  notes: text("notes"),
+  is_favorite: boolean("is_favorite").default(false),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Log entries table
 export const logEntries = pgTable("log_entries", {
   id: uuid("id").defaultRandom().primaryKey(),
   user_id: uuid("user_id").notNull().references(() => connectUsers.id),
+  contact_id: uuid("contact_id").references(() => contacts.id),
   name: text("name"),
   company: text("company"),
   title: text("title"),
@@ -59,21 +75,6 @@ export const media = pgTable("media", {
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Contacts table
-export const contacts = pgTable("contacts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  created_by: uuid("created_by").notNull().references(() => connectUsers.id),
-  name: text("name"),
-  company: text("company"),
-  title: text("title"),
-  email: text("email"),
-  phone: text("phone"),
-  notes: text("notes"),
-  is_favorite: boolean("is_favorite").default(false),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
-
 // User message templates
 export const messageTemplates = pgTable("message_templates", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -97,6 +98,10 @@ export const logEntryRelations = relations(logEntries, ({ one, many }) => ({
   user: one(connectUsers, {
     fields: [logEntries.user_id],
     references: [connectUsers.id],
+  }),
+  contact: one(contacts, {
+    fields: [logEntries.contact_id],
+    references: [contacts.id],
   }),
   tags: many(logEntriesTags),
   media: many(media),
@@ -170,6 +175,7 @@ export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
 export type LogEntryWithRelations = LogEntry & {
   tags?: Tag[];
   media?: Media[];
+  contact?: Contact;
 };
 
 export type ContactWithRelations = Contact & {
