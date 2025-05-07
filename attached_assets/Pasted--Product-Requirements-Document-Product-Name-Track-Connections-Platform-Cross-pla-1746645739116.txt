@@ -1,0 +1,138 @@
+
+
+# **Product Requirements Document**
+
+**Product Name:** *Track Connections*
+**Platform:** Cross-platform, Mobile-First Web Application
+**Design System:** [shadcn/ui](https://ui.shadcn.com/)
+**Environment:** Must support local development and debugging in **Windows** and **Linux**
+**ID Standard:** All entity IDs must be stored as **GUIDs**
+
+---
+
+## **Overview**
+
+This application helps users **log and organize interactions** with people they meet at conferences. Users can capture contact details, notes, photos/videos, and contextual tags. The app features a chronological feed, searchable contact list, configurable follow-up templates, and favorites. It intentionally excludes any messaging infrastructure and focuses purely on post-interaction logging and recall.
+
+---
+
+## **Authentication**
+
+* **Registration**
+
+  * Name (required)
+  * Email (required)
+  * Password (required)
+
+* **Login**
+
+  * Email
+  * Password
+
+* Session management via secure tokens (e.g. JWT or equivalent)
+
+---
+
+## **Core Features**
+
+### **1. Log Entry Feed**
+
+A chronological list of interactions.
+
+Each log includes:
+
+* Name (optional)
+* Company (optional)
+* Title/Role (optional)
+* Email (optional)
+* Phone Number (optional)
+* **Where We Met** (optional string)
+* Notes (freeform text)
+* **Tags** (multi-select or create new; per user)
+* **Media Uploads** (multiple images/videos per log)
+* **Favorite** toggle
+
+**Actions:**
+
+* Create/Edit/Delete Logs
+* Filter by tags or favorites
+* Display logs sorted by creation time (most recent first)
+
+---
+
+### **2. Contact List**
+
+Auto-generated from unique entries with an email or phone number.
+
+Each contact card shows:
+
+* Name, Company, Title
+* All associated log entries
+* Email (if available)
+* Phone (if available)
+* Buttons to:
+
+  * **Send Default Email**
+  * **Send Default Text Message**
+
+---
+
+### **3. Default Message Templates**
+
+User-defined templates for quick follow-up.
+
+Stored in settings:
+
+* **Default Email Message**
+* **Default SMS Message**
+
+Displayed as pre-filled content when user clicks "Send" from contact.
+
+---
+
+### **4. Tagging**
+
+* User can create and assign tags to logs
+* Tags are searchable and filterable in both the feed and contact list
+
+---
+
+### **5. Favorites**
+
+* Logs can be marked as a favorite
+* "Favorites" filter option in log feed
+
+---
+
+## **Search**
+
+Searchable fields include:
+
+* Name
+* Company
+* Title
+* Notes
+* Tags
+* “Where We Met”
+
+---
+
+## **Media Handling**
+
+* Support multiple images and/or videos per log
+* Use mobile camera/file input
+* Media stored securely with links in DB
+* Mobile-first compression optimization
+
+---
+
+## **Technical Requirements**
+
+* Use **GUIDs** for all entities (users, logs, contacts, tags, media). 
+* All entities will have created_at and updated_at properties
+* App must be **cross-platform** Install cross-platform node module and make sure npm run dev script utilizes cross platform 
+  * Dev/debug locally on **Windows** or **Linux**
+* Use **shadcn/ui** for component styling
+* Database: Postgres 
+* Media storage: aws S3
+
