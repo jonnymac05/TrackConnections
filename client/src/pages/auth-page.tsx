@@ -89,6 +89,14 @@ export default function AuthPage() {
 
   // Handle register submission
   const onRegisterSubmit = (data: RegisterFormValues) => {
+    if (data.password !== data.confirmPassword) {
+      registerForm.setError("confirmPassword", {
+        type: "manual",
+        message: "Passwords do not match"
+      });
+      return;
+    }
+    
     registerMutation.mutate({
       name: data.name,
       email: data.email,
