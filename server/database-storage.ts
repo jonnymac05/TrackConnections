@@ -9,6 +9,7 @@ import { IStorage } from "./storage";
 import { eq, and, like, or } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import session from "express-session";
+import crypto from "crypto";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -38,9 +39,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(userData: InsertUser): Promise<User> {
+    // Use randomUUID from Node.js crypto module to generate a UUID
+    const id = crypto.randomUUID();
+    
     const [user] = await db
       .insert(connectUsers)
       .values({
+        id,
         ...userData,
         email: userData.email.toLowerCase(),
         roles: userData.roles || [],
