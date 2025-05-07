@@ -41,6 +41,7 @@ export class DatabaseStorage implements IStorage {
   async createUser(userData: InsertUser): Promise<User> {
     // Use randomUUID from Node.js crypto module to generate a UUID
     const id = crypto.randomUUID();
+    const now = new Date();
     
     const [user] = await db
       .insert(connectUsers)
@@ -50,7 +51,9 @@ export class DatabaseStorage implements IStorage {
         email: userData.email.toLowerCase(),
         roles: userData.roles || [],
         stripe_customer_id: userData.stripe_customer_id || null,
-        stripe_subscription_id: userData.stripe_subscription_id || null
+        stripe_subscription_id: userData.stripe_subscription_id || null,
+        created_at: now,
+        updated_at: now
       })
       .returning();
     return user;
@@ -121,10 +124,16 @@ export class DatabaseStorage implements IStorage {
   async createLogEntry(logEntryData: InsertLogEntry, tagIds: string[] = []): Promise<LogEntryWithRelations> {
     // Generate a UUID for the log entry
     const id = crypto.randomUUID();
+    const now = new Date();
     
     const [entry] = await db
       .insert(logEntries)
-      .values({ id, ...logEntryData })
+      .values({ 
+        id, 
+        ...logEntryData,
+        created_at: now,
+        updated_at: now
+      })
       .returning();
     
     // Add tags if provided
@@ -235,10 +244,16 @@ export class DatabaseStorage implements IStorage {
   async createTag(tagData: InsertTag): Promise<Tag> {
     // Generate a UUID for the tag
     const id = crypto.randomUUID();
+    const now = new Date();
     
     const [tag] = await db
       .insert(tags)
-      .values({ id, ...tagData })
+      .values({ 
+        id, 
+        ...tagData,
+        created_at: now,
+        updated_at: now
+      })
       .returning();
     
     return tag;
@@ -294,10 +309,15 @@ export class DatabaseStorage implements IStorage {
   async addTagToLogEntry(logEntryTagData: InsertLogEntryTag): Promise<LogEntryTag> {
     // Generate a UUID for the log entry tag relationship
     const id = crypto.randomUUID();
+    const now = new Date();
     
     const [logEntryTag] = await db
       .insert(logEntriesTags)
-      .values({ id, ...logEntryTagData })
+      .values({ 
+        id, 
+        ...logEntryTagData,
+        created_at: now
+      })
       .returning();
     
     return logEntryTag;
@@ -328,10 +348,16 @@ export class DatabaseStorage implements IStorage {
   async addMediaToLogEntry(mediaData: InsertMedia): Promise<Media> {
     // Generate a UUID for the media
     const id = crypto.randomUUID();
+    const now = new Date();
     
     const [mediaItem] = await db
       .insert(media)
-      .values({ id, ...mediaData })
+      .values({ 
+        id, 
+        ...mediaData,
+        created_at: now,
+        updated_at: now
+      })
       .returning();
     
     return mediaItem;
@@ -374,9 +400,15 @@ export class DatabaseStorage implements IStorage {
     } else {
       // Create new template with UUID
       const id = crypto.randomUUID();
+      const now = new Date();
       const [template] = await db
         .insert(messageTemplates)
-        .values({ id, ...templateData })
+        .values({ 
+          id, 
+          ...templateData,
+          created_at: now,
+          updated_at: now
+        })
         .returning();
       
       return template;
