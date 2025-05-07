@@ -119,9 +119,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLogEntry(logEntryData: InsertLogEntry, tagIds: string[] = []): Promise<LogEntryWithRelations> {
+    // Generate a UUID for the log entry
+    const id = crypto.randomUUID();
+    
     const [entry] = await db
       .insert(logEntries)
-      .values(logEntryData)
+      .values({ id, ...logEntryData })
       .returning();
     
     // Add tags if provided
@@ -230,9 +233,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTag(tagData: InsertTag): Promise<Tag> {
+    // Generate a UUID for the tag
+    const id = crypto.randomUUID();
+    
     const [tag] = await db
       .insert(tags)
-      .values(tagData)
+      .values({ id, ...tagData })
       .returning();
     
     return tag;
@@ -286,9 +292,12 @@ export class DatabaseStorage implements IStorage {
 
   // Log entry tag methods
   async addTagToLogEntry(logEntryTagData: InsertLogEntryTag): Promise<LogEntryTag> {
+    // Generate a UUID for the log entry tag relationship
+    const id = crypto.randomUUID();
+    
     const [logEntryTag] = await db
       .insert(logEntriesTags)
-      .values(logEntryTagData)
+      .values({ id, ...logEntryTagData })
       .returning();
     
     return logEntryTag;
@@ -317,9 +326,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addMediaToLogEntry(mediaData: InsertMedia): Promise<Media> {
+    // Generate a UUID for the media
+    const id = crypto.randomUUID();
+    
     const [mediaItem] = await db
       .insert(media)
-      .values(mediaData)
+      .values({ id, ...mediaData })
       .returning();
     
     return mediaItem;
@@ -360,10 +372,11 @@ export class DatabaseStorage implements IStorage {
       
       return template;
     } else {
-      // Create new template
+      // Create new template with UUID
+      const id = crypto.randomUUID();
       const [template] = await db
         .insert(messageTemplates)
-        .values(templateData)
+        .values({ id, ...templateData })
         .returning();
       
       return template;
