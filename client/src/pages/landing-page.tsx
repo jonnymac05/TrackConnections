@@ -66,7 +66,7 @@ export default function LandingPage() {
             <Button variant="ghost" onClick={() => navigate('/auth')}>
               Sign In
             </Button>
-            <Button onClick={() => navigate('/auth')}>
+            <Button onClick={() => navigate('/auth#register')}>
               Get Started
               <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
@@ -86,7 +86,7 @@ export default function LandingPage() {
                 Track, organize, and follow up with important connections you make at conferences, meetings, and networking events.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button size="lg" onClick={() => navigate('/auth')} className="bg-primary hover:bg-primary/90">
+                <Button size="lg" onClick={() => navigate('/auth#register')} className="bg-primary hover:bg-primary/90">
                   Create Free Account
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -232,7 +232,7 @@ export default function LandingPage() {
           <Button 
             size="lg" 
             variant="secondary" 
-            onClick={() => navigate('/auth')}
+            onClick={() => navigate('/auth#register')}
             className="bg-white text-primary hover:bg-blue-50"
           >
             Get Started for Free

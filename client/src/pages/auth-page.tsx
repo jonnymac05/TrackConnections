@@ -36,7 +36,21 @@ type RegisterFormValues = z.infer<typeof registerFormSchema>;
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const { loginMutation, registerMutation, user } = useAuth();
-  const [_, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+
+  // Check if there's a mode parameter in the URL or hash
+  useEffect(() => {
+    // Check for URL parameter
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    
+    // Check for URL hash
+    const hash = window.location.hash.substring(1);
+    
+    if (mode === 'register' || hash === 'register') {
+      setIsLogin(false);
+    }
+  }, []);
 
   // Redirect to home if already logged in
   useEffect(() => {
