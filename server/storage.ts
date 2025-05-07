@@ -514,7 +514,7 @@ export class MemStorage implements IStorage {
   // New contact methods
   async getAllContacts(userId: string): Promise<ContactWithRelations[]> {
     return Array.from(this.contacts.values())
-      .filter(contact => contact.user_id === userId)
+      .filter(contact => contact.created_by === userId)
       .sort((a, b) => {
         const nameA = a.name || '';
         const nameB = b.name || '';
@@ -565,7 +565,7 @@ export class MemStorage implements IStorage {
 
   async getFavoriteContacts(userId: string): Promise<ContactWithRelations[]> {
     return Array.from(this.contacts.values())
-      .filter(contact => contact.user_id === userId && contact.is_favorite)
+      .filter(contact => contact.created_by === userId && contact.is_favorite)
       .sort((a, b) => {
         const nameA = a.name || '';
         const nameB = b.name || '';
