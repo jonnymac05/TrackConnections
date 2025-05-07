@@ -3,13 +3,14 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Helmet } from "react-helmet";
 
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 
 // Login form schema
@@ -26,6 +27,9 @@ const registerFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
   confirmPassword: z.string().min(1, { message: "Please confirm your password" }),
+  termsAccepted: z.boolean().refine((val) => val === true, {
+    message: "You must accept the terms and privacy policy",
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -76,6 +80,7 @@ export default function AuthPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      termsAccepted: false,
     },
   });
 
@@ -283,6 +288,34 @@ export default function AuthPage() {
                             />
                           </FormControl>
                           <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="termsAccepted"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-normal">
+                              I agree to the{" "}
+                              <Link to="/terms" className="text-primary underline" target="_blank">
+                                Terms and Conditions
+                              </Link>{" "}
+                              and{" "}
+                              <Link to="/privacy" className="text-primary underline" target="_blank">
+                                Privacy Policy
+                              </Link>
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
                         </FormItem>
                       )}
                     />

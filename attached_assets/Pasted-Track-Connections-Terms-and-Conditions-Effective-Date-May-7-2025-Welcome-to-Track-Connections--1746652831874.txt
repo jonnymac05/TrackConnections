@@ -1,0 +1,60 @@
+Track Connections – Terms and Conditions
+Effective Date: May 7, 2025
+
+Welcome to Track Connections, a web application designed to help users log and organize their interactions at conferences. By registering for and using this application, you agree to the following terms:
+
+1. Acceptance of Terms
+By creating an account or using the Track Connections platform, you agree to be bound by these Terms and Conditions. If you do not agree, you may not use the service.
+
+2. Use of the Service
+Track Connections allows users to log personal interactions, upload media, and store related contact information. You are responsible for the accuracy of any data you enter and for ensuring you have the right to store and use any uploaded content.
+
+3. Data Loss Disclaimer
+We do not guarantee the availability or integrity of your stored data. While we take reasonable steps to maintain data security, data may be lost, corrupted, or become inaccessible without notice. By using the service, you acknowledge and accept this risk.
+
+4. Limitation of Liability
+Track Connections, its owners, and operators are not liable for any damages—including direct, indirect, incidental, or consequential damages—resulting from your use or inability to use the service, loss of data, or unauthorized access.
+
+5. Termination
+We reserve the right to suspend or terminate access to the platform at any time, for any reason, without notice.
+
+6. Modifications
+We may update these Terms and Conditions from time to time. Continued use of the service after changes means you accept the revised terms.
+
+Track Connections – Privacy Policy
+Effective Date: May 7, 2025
+
+We take your privacy seriously. This Privacy Policy outlines how Track Connections handles your personal information.
+
+1. Information We Collect
+When you register and use the application, we collect:
+
+Your name and email address (required)
+
+Any optional contact info you enter (e.g. phone, company, title)
+
+Notes, tags, and uploaded images/videos associated with your logs
+
+Default message templates you provide
+
+2. How We Use Your Data
+Your data is stored to provide core functionality of the application. We do not sell or share your information with third parties. Data may be used to:
+
+Populate your contact and log entries
+
+Provide reminders and search functionality
+
+Improve the user experience
+
+3. Data Storage
+Data is stored securely using encrypted cloud infrastructure. Uploaded media is stored in a secure storage system. We do not guarantee data preservation and recommend exporting important data periodically.
+
+4. Your Control
+You may delete your account and data at any time. Deletion is permanent and cannot be undone.
+
+5. Security
+We implement reasonable measures to protect your information. However, no system is 100% secure, and we cannot guarantee the absolute security of your data.
+
+6. Policy Changes
+We may update this policy. Continued use of the service after any changes constitutes your acceptance of the new terms.
+

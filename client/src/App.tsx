@@ -8,6 +8,8 @@ import LandingPage from "@/pages/landing-page";
 import ContactListPage from "@/pages/contact-list-page";
 import ContactDetailPage from "@/pages/contact-detail-page";
 import SettingsPage from "@/pages/settings-page";
+import TermsPage from "@/pages/terms-page";
+import PrivacyPage from "@/pages/privacy-page";
 import { Helmet } from "react-helmet";
 import { AuthProvider } from "./hooks/use-auth";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -23,6 +25,8 @@ function Router() {
       <ProtectedRoute path="/contacts/:id" component={ContactDetailPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
       <Route component={NotFound} />
     </Switch>
   );
