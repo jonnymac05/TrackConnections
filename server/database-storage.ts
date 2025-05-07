@@ -3,7 +3,7 @@ import {
   User, InsertUser, LogEntry, InsertLogEntry, Tag, InsertTag,
   LogEntryTag, InsertLogEntryTag, Media, InsertMedia,
   MessageTemplate, InsertMessageTemplate, LogEntryWithRelations,
-  ContactPerson, connectUsers, logEntries, tags, logEntriesTags, media, messageTemplates,
+  connectUsers, logEntries, tags, logEntriesTags, media, messageTemplates,
   contacts, Contact, InsertContact, ContactWithRelations
 } from "@shared/schema";
 import { IStorage } from "./storage";

@@ -11,7 +11,6 @@ import {
   InsertMedia,
   MessageTemplate,
   InsertMessageTemplate,
-  ContactPerson,
   LogEntryWithRelations,
   Contact,
   InsertContact,
@@ -66,8 +65,8 @@ export interface IStorage {
   
   // Contact methods
   // Legacy contact methods (deprecated)
-  getContacts(userId: string): Promise<ContactPerson[]>;
-  getContactById(id: string): Promise<ContactPerson | undefined>;
+  getContacts(userId: string): Promise<Contact[]>;
+  getContactById(id: string): Promise<Contact | undefined>;
   
   // New contact methods
   getAllContacts(userId: string): Promise<ContactWithRelations[]>;
