@@ -48,22 +48,61 @@ export function setupAuth(app: Express) {
     new LocalStrategy(
       {
         usernameField: "email",
+        passwordField: "password"
       },
       async (email, password, done) => {
-        const user = await storage.getUserByEmail(email);
-        if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false);
-        } else {
+        try {
+          console.log('LocalStrategy authenticating user with email:', email);
+          
+          if (!email || !password) {
+            console.log('LocalStrategy failed: Missing email or password');
+            return done(null, false);
+          }
+          
+          const user = await storage.getUserByEmail(email);
+          
+          if (!user) {
+            console.log('LocalStrategy failed: No user found with email:', email);
+            return done(null, false);
+          }
+          
+          const passwordMatches = await comparePasswords(password, user.password);
+          if (!passwordMatches) {
+            console.log('LocalStrategy failed: Password does not match for user:', email);
+            return done(null, false);
+          }
+          
+          console.log('LocalStrategy successful for user:', user.id);
           return done(null, user);
+        } catch (error) {
+          console.error('LocalStrategy error:', error);
+          return done(error);
         }
       }
     )
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user, done) => {
+    console.log('Serializing user:', user.id);
+    done(null, user.id);
+  });
+  
   passport.deserializeUser(async (id: string, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      console.log('Deserializing user with ID:', id);
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        console.log('Deserialization failed: No user found with ID:', id);
+        return done(null, false);
+      }
+      
+      console.log('User deserialized successfully:', id);
+      done(null, user);
+    } catch (error) {
+      console.error('Deserialization error:', error);
+      done(error, null);
+    }
   });
 
   app.post("/api/register", async (req, res, next) => {

@@ -81,6 +81,8 @@ export default function AuthPage() {
 
   // Handle login submission
   const onLoginSubmit = (data: LoginFormValues) => {
+    console.log('Login form submitted with:', { email: data.email });
+    
     loginMutation.mutate({
       email: data.email,
       password: data.password,
@@ -89,7 +91,14 @@ export default function AuthPage() {
 
   // Handle register submission
   const onRegisterSubmit = (data: RegisterFormValues) => {
+    console.log('Registration form submitted with:', { 
+      name: data.name, 
+      email: data.email, 
+      passwordMatch: data.password === data.confirmPassword 
+    });
+    
     if (data.password !== data.confirmPassword) {
+      console.log('Password confirmation failed');
       registerForm.setError("confirmPassword", {
         type: "manual",
         message: "Passwords do not match"
@@ -97,6 +106,7 @@ export default function AuthPage() {
       return;
     }
     
+    console.log('Submitting registration data...');
     registerMutation.mutate({
       name: data.name,
       email: data.email,
