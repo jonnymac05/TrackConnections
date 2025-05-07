@@ -26,6 +26,11 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, userData: Partial<User>): Promise<User | undefined>;
+  updateStripeCustomerId(id: string, stripeCustomerId: string): Promise<User | undefined>;
+  updateUserStripeInfo(id: string, stripeInfo: { 
+    stripe_customer_id: string; 
+    stripe_subscription_id?: string; 
+  }): Promise<User | undefined>;
   
   // Log entry methods
   getLogEntries(userId: string): Promise<LogEntryWithRelations[]>;
@@ -106,6 +111,9 @@ export class MemStorage implements IStorage {
     const user: User = {
       id,
       ...userData,
+      roles: userData.roles || [],
+      stripe_customer_id: userData.stripe_customer_id || null,
+      stripe_subscription_id: userData.stripe_subscription_id || null,
       created_at: timestamp,
       updated_at: timestamp
     };
@@ -120,6 +128,38 @@ export class MemStorage implements IStorage {
     const updatedUser: User = {
       ...user,
       ...userData,
+      updated_at: new Date()
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async updateStripeCustomerId(id: string, stripeCustomerId: string): Promise<User | undefined> {
+    const user = await this.getUser(id);
+    if (!user) return undefined;
+    
+    const updatedUser: User = {
+      ...user,
+      stripe_customer_id: stripeCustomerId,
+      updated_at: new Date()
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async updateUserStripeInfo(id: string, stripeInfo: { 
+    stripe_customer_id: string; 
+    stripe_subscription_id?: string;
+  }): Promise<User | undefined> {
+    const user = await this.getUser(id);
+    if (!user) return undefined;
+    
+    const updatedUser: User = {
+      ...user,
+      stripe_customer_id: stripeInfo.stripe_customer_id,
+      stripe_subscription_id: stripeInfo.stripe_subscription_id || null,
       updated_at: new Date()
     };
     
