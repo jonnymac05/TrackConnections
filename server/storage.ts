@@ -69,7 +69,7 @@ export interface IStorage {
   searchLogEntries(userId: string, query: string): Promise<LogEntryWithRelations[]>;
 
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -79,7 +79,7 @@ export class MemStorage implements IStorage {
   private logEntriesTags: Map<string, LogEntryTag>;
   private mediaItems: Map<string, Media>;
   private messageTemplates: Map<string, MessageTemplate>;
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();

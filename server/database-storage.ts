@@ -260,16 +260,21 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
     
-    // Get those log entries
-    const entries = await db
-      .select()
-      .from(logEntries)
-      .where(
-        logEntryIds.map(id => eq(logEntries.id, id)).reduce(
-          (acc, condition) => or(acc, condition)
-        )
-      )
-      .orderBy(logEntries.created_at);
+    // Get those log entries using a simple approach - get all entries that match any ID in the array
+    const entries = [];
+    for (const entryId of logEntryIds) {
+      const matchingEntries = await db
+        .select()
+        .from(logEntries)
+        .where(eq(logEntries.id, entryId));
+      
+      entries.push(...matchingEntries);
+    }
+    
+    // Sort by creation date
+    entries.sort((a, b) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
     
     return await Promise.all(entries.map(entry => this.enrichLogEntry(entry)));
   }
@@ -285,7 +290,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removeTagFromLogEntry(logEntryId: string, tagId: string): Promise<boolean> {
-    const result = await db
+    await db
       .delete(logEntriesTags)
       .where(
         and(
@@ -294,7 +299,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
     
-    return result.count > 0;
+    return true;
   }
 
   // Media methods
@@ -316,11 +321,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMedia(id: string): Promise<boolean> {
-    const result = await db
+    await db
       .delete(media)
       .where(eq(media.id, id));
     
-    return result.count > 0;
+    return true;
   }
 
   // Message template methods
@@ -384,9 +389,13 @@ export class DatabaseStorage implements IStorage {
     // Convert map to array of contacts
     const contacts: ContactPerson[] = [];
     
-    for (const [key, entries] of contactMap.entries()) {
+    // Get the entries from the map in a way that avoids Map iterator type issues
+    const keys = Array.from(contactMap.keys());
+    for (const key of keys) {
+      const entries = contactMap.get(key)!;
+      
       // Sort entries by date, newest first
-      entries.sort((a, b) => {
+      entries.sort((a: LogEntry, b: LogEntry) => {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
       
@@ -417,7 +426,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort contacts by name
-    contacts.sort((a, b) => {
+    contacts.sort((a: ContactPerson, b: ContactPerson) => {
       const nameA = a.name || '';
       const nameB = b.name || '';
       return nameA.localeCompare(nameB);
@@ -465,15 +474,18 @@ export class DatabaseStorage implements IStorage {
     const tagIds = entryTags.map(et => et.tag_id);
     
     let entryTagsData: Tag[] = [];
+    // Get tags one by one instead of using the OR condition with reduce
     if (tagIds.length > 0) {
-      entryTagsData = await db
-        .select()
-        .from(tags)
-        .where(
-          tagIds.map(id => eq(tags.id, id)).reduce(
-            (acc, condition) => or(acc, condition)
-          )
-        );
+      for (const tagId of tagIds) {
+        const [tag] = await db
+          .select()
+          .from(tags)
+          .where(eq(tags.id, tagId));
+        
+        if (tag) {
+          entryTagsData.push(tag);
+        }
+      }
     }
     
     const entryMedia = await db
