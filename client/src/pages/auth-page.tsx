@@ -99,8 +99,18 @@ export default function AuthPage() {
     console.log('Registration form submitted with:', { 
       name: data.name, 
       email: data.email, 
-      passwordMatch: data.password === data.confirmPassword 
+      passwordMatch: data.password === data.confirmPassword,
+      termsAccepted: data.termsAccepted
     });
+    
+    // Check if form is valid
+    if (!data.termsAccepted) {
+      registerForm.setError("termsAccepted", {
+        type: "manual",
+        message: "You must accept the terms and privacy policy"
+      });
+      return;
+    }
     
     if (data.password !== data.confirmPassword) {
       console.log('Password confirmation failed');
@@ -152,6 +162,7 @@ export default function AuthPage() {
                           <FormControl>
                             <Input
                               placeholder="your@email.com"
+                              type="email"
                               {...field}
                               autoComplete="email"
                             />
@@ -227,6 +238,7 @@ export default function AuthPage() {
                           <FormControl>
                             <Input
                               placeholder="John Doe"
+                              type="text"
                               {...field}
                               autoComplete="name"
                             />
@@ -245,6 +257,7 @@ export default function AuthPage() {
                           <FormControl>
                             <Input
                               placeholder="your@email.com"
+                              type="email"
                               {...field}
                               autoComplete="email"
                             />
