@@ -439,75 +439,15 @@ export class MemStorage implements IStorage {
     }
   }
 
-  // Contact methods
-  async getContacts(userId: string): Promise<ContactPerson[]> {
-    const logEntries = await this.getLogEntries(userId);
-    
-    // Create a map to group log entries by email or phone
-    const contactMap = new Map<string, LogEntry[]>();
-    
-    for (const entry of logEntries) {
-      // Skip entries with no contact info
-      if (!entry.email && !entry.phone) continue;
-      
-      // Use email as primary key, fall back to phone
-      const key = entry.email || entry.phone!;
-      
-      if (!contactMap.has(key)) {
-        contactMap.set(key, []);
-      }
-      
-      contactMap.get(key)!.push(entry);
-    }
-    
-    // Convert map to array of contacts
-    const contacts: ContactPerson[] = [];
-    
-    for (const [key, entries] of contactMap.entries()) {
-      // Sort entries by date, newest first
-      entries.sort((a, b) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-      
-      // Use the most recent entry for contact info
-      const mostRecent = entries[0];
-      
-      // Get all tags for this contact
-      const tagIds = new Set<string>();
-      for (const entry of entries) {
-        const entryWithTags = await this.enrichLogEntry(entry);
-        entryWithTags.tags?.forEach(tag => tagIds.add(tag.id));
-      }
-      
-      const tags = await Promise.all(
-        Array.from(tagIds).map(id => this.getTagById(id))
-      );
-      
-      contacts.push({
-        id: key, // Using email/phone as ID
-        name: mostRecent.name,
-        company: mostRecent.company,
-        title: mostRecent.title,
-        email: mostRecent.email,
-        phone: mostRecent.phone,
-        logEntries: entries,
-        tags: tags.filter(Boolean) as Tag[]
-      });
-    }
-    
-    // Sort contacts by name
-    contacts.sort((a, b) => {
-      const nameA = a.name || '';
-      const nameB = b.name || '';
-      return nameA.localeCompare(nameB);
-    });
-    
-    return contacts;
+  // Contact methods (Legacy)
+  async getContacts(userId: string): Promise<Contact[]> {
+    // Fetch contacts from new method
+    return this.getAllContacts(userId);
   }
 
-  async getContactById(id: string): Promise<ContactPerson | undefined> {
-    const contacts = await this.getContacts(id.split(':')[0]); // Extract user ID from contact ID
-    return contacts.find(contact => contact.id === id);
+  async getContactById(id: string): Promise<Contact | undefined> {
+    // Use the new method directly
+    return this.getContactByIdNew(id);
   }
 
   // New contact methods
