@@ -5,11 +5,15 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
+// Use the user's Neon database if the connection string is provided, 
+// otherwise fall back to the default Replit database
+const connectionString = process.env.TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING || process.env.DATABASE_URL;
+
+if (!connectionString) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "No database connection string available. Please provide either TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING or ensure DATABASE_URL is set.",
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ connectionString });
 export const db = drizzle(pool, { schema });
