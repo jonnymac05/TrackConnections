@@ -68,54 +68,86 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
+      console.log('Registration request received:', {
+        name: req.body.name,
+        email: req.body.email,
+        passwordLength: req.body.password ? req.body.password.length : 0
+      });
+      
       // Validate required fields
       if (!req.body.name || !req.body.email || !req.body.password) {
+        console.log('Registration validation failed: missing required fields');
         return res.status(400).json({ message: "Name, email and password are required" });
       }
 
       const existingUser = await storage.getUserByEmail(req.body.email);
       if (existingUser) {
+        console.log('Registration failed: email already in use', req.body.email);
         return res.status(400).json({ message: "Email already in use" });
       }
 
+      console.log('Creating new user...');
       const user = await storage.createUser({
         name: req.body.name,
         email: req.body.email,
         password: await hashPassword(req.body.password),
+        roles: ['user']
       });
+      console.log('User created with ID:', user.id);
 
       // Create default message templates for new user
+      console.log('Creating default message templates...');
       await storage.createOrUpdateMessageTemplate({
         user_id: user.id,
         email_template: "Hi [Name], It was great meeting you at [Event]. I'd love to connect and discuss [Topic] further. Best regards, [Your Name]",
         sms_template: "Hi [Name], it's [Your Name] from [Event]. Great meeting you! Let's connect soon."
       });
+      console.log('Message templates created');
 
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error('Login after registration failed:', err);
+          return next(err);
+        }
         
+        console.log('User logged in after registration');
         // Return user without password
         const { password, ...userWithoutPassword } = user;
         res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
+      console.error('Registration error:', error);
       next(error);
     }
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log('Login attempt:', { email: req.body.email });
+    
+    if (!req.body.email || !req.body.password) {
+      console.log('Login validation failed: missing email or password');
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+    
     passport.authenticate("local", (err, user, info) => {
       if (err) {
+        console.error('Login authentication error:', err);
         return next(err);
       }
+      
       if (!user) {
+        console.log('Login failed: Invalid credentials for', req.body.email);
         return res.status(401).json({ message: "Invalid email or password" });
       }
+      
+      console.log('User authenticated successfully:', user.id);
       req.login(user, (err) => {
         if (err) {
+          console.error('Login session creation error:', err);
           return next(err);
         }
         
+        console.log('Login successful for user:', user.id);
         // Return user without password
         const { password, ...userWithoutPassword } = user;
         return res.json(userWithoutPassword);
