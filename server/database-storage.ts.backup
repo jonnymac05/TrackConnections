@@ -533,6 +533,113 @@ export class DatabaseStorage implements IStorage {
       logEntries: enrichedEntries
     };
   }
+  
+  // New contact methods
+  async getAllContacts(userId: string): Promise<ContactWithRelations[]> {
+    const contactsList = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.created_by, userId))
+      .orderBy(contacts.name);
+    
+    return await Promise.all(contactsList.map(contact => this.enrichContact(contact)));
+  }
+
+  async getContactByIdNew(id: string): Promise<ContactWithRelations | undefined> {
+    const [contact] = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.id, id));
+    
+    if (!contact) return undefined;
+    
+    return this.enrichContact(contact);
+  }
+
+  async createContact(contactData: InsertContact): Promise<Contact> {
+    // Generate a UUID for the contact
+    const id = crypto.randomUUID();
+    const now = new Date();
+    
+    const [contact] = await db
+      .insert(contacts)
+      .values({ 
+        id, 
+        ...contactData,
+        is_favorite: contactData.is_favorite || false,
+        created_at: now,
+        updated_at: now
+      })
+      .returning();
+    
+    return contact;
+  }
+
+  async updateContact(id: string, contactData: Partial<Contact>): Promise<Contact | undefined> {
+    const [contact] = await db
+      .update(contacts)
+      .set({
+        ...contactData,
+        updated_at: new Date()
+      })
+      .where(eq(contacts.id, id))
+      .returning();
+    
+    return contact;
+  }
+
+  async deleteContact(id: string): Promise<boolean> {
+    // Delete the contact
+    await db
+      .delete(contacts)
+      .where(eq(contacts.id, id));
+    
+    return true; // If we got here without errors, it was successful
+  }
+
+  async getFavoriteContacts(userId: string): Promise<ContactWithRelations[]> {
+    const favoriteContacts = await db
+      .select()
+      .from(contacts)
+      .where(and(
+        eq(contacts.created_by, userId),
+        eq(contacts.is_favorite, true)
+      ))
+      .orderBy(contacts.name);
+    
+    return await Promise.all(favoriteContacts.map(contact => this.enrichContact(contact)));
+  }
+
+  async toggleFavoriteContact(id: string, isFavorite: boolean): Promise<Contact | undefined> {
+    const [contact] = await db
+      .update(contacts)
+      .set({
+        is_favorite: isFavorite,
+        updated_at: new Date()
+      })
+      .where(eq(contacts.id, id))
+      .returning();
+    
+    return contact;
+  }
+
+  // Helper method to enrich a contact with its related log entries
+  private async enrichContact(contact: Contact): Promise<ContactWithRelations> {
+    // Find log entries for this contact
+    const relatedEntries = await db
+      .select()
+      .from(logEntries)
+      .where(eq(logEntries.contact_id, contact.id))
+      .orderBy(desc(logEntries.created_at));
+    
+    // Enrich log entries with tags and media
+    const enrichedEntries = await Promise.all(relatedEntries.map(entry => this.enrichLogEntry(entry)));
+    
+    return {
+      ...contact,
+      logEntries: enrichedEntries
+    };
+  }
 
   // Search method
   async searchLogEntries(userId: string, query: string): Promise<LogEntryWithRelations[]> {
