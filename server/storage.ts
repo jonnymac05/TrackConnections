@@ -202,9 +202,20 @@ export class MemStorage implements IStorage {
   async createLogEntry(logEntryData: InsertLogEntry, tagIds: string[] = []): Promise<LogEntryWithRelations> {
     const timestamp = new Date();
     const id = uuidv4();
+    
+    // Handle optional fields to avoid undefined values
     const logEntry: LogEntry = {
       id,
-      ...logEntryData,
+      name: logEntryData.name || null,
+      email: logEntryData.email || null,
+      company: logEntryData.company || null,
+      title: logEntryData.title || null,
+      phone: logEntryData.phone || null,
+      notes: logEntryData.notes || null,
+      is_favorite: logEntryData.is_favorite ?? false,
+      where_met: logEntryData.where_met || null,
+      contact_id: logEntryData.contact_id || null,
+      user_id: logEntryData.user_id,
       created_at: timestamp,
       updated_at: timestamp
     };
@@ -217,6 +228,25 @@ export class MemStorage implements IStorage {
         log_entry_id: id,
         tag_id: tagId
       });
+    }
+    
+    // If this log entry is associated with a contact, make sure the contact exists
+    if (logEntry.contact_id) {
+      const contact = this.contacts.get(logEntry.contact_id);
+      if (!contact) {
+        // The contact doesn't exist yet, we can create it with basic info from the log entry
+        await this.createContact({
+          created_by: logEntry.user_id,
+          name: logEntry.name || null,
+          email: logEntry.email || null,
+          company: logEntry.company || null,
+          title: logEntry.title || null,
+          phone: logEntry.phone || null,
+          notes: logEntry.notes || null,
+          is_favorite: false,
+          where_met: logEntry.where_met || null
+        });
+      }
     }
     
     return this.enrichLogEntry(logEntry);
@@ -417,7 +447,9 @@ export class MemStorage implements IStorage {
       // Update existing template
       const updatedTemplate: MessageTemplate = {
         ...existingTemplate,
-        ...templateData,
+        user_id: templateData.user_id,
+        email_template: templateData.email_template || null,
+        sms_template: templateData.sms_template || null,
         updated_at: new Date()
       };
       
@@ -429,7 +461,9 @@ export class MemStorage implements IStorage {
       const id = uuidv4();
       const template: MessageTemplate = {
         id,
-        ...templateData,
+        user_id: templateData.user_id,
+        email_template: templateData.email_template || null,
+        sms_template: templateData.sms_template || null,
         created_at: timestamp,
         updated_at: timestamp
       };

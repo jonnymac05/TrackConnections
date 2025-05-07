@@ -236,10 +236,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
-      const contacts = await storage.getContacts(req.user.id);
+      const contacts = await storage.getAllContacts(req.user.id);
       res.json(contacts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch contacts" });
+    }
+  });
+
+  app.get("/api/contacts/favorites", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const favorites = await storage.getFavoriteContacts(req.user.id);
+      res.json(favorites);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch favorite contacts" });
+    }
+  });
+
+  app.post("/api/contacts", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const contactData = req.body;
+      // Add user ID to contact data
+      contactData.created_by = req.user.id;
+      
+      const contact = await storage.createContact(contactData);
+      res.status(201).json(contact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create contact" });
+    }
+  });
+
+  app.get("/api/contacts/:id", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const contact = await storage.getContactByIdNew(req.params.id);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      // Verify the contact belongs to the user
+      if (contact.created_by !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      res.json(contact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch contact" });
+    }
+  });
+
+  app.put("/api/contacts/:id", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      // First get the contact to verify ownership
+      const contact = await storage.getContactByIdNew(req.params.id);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      // Verify the contact belongs to the user
+      if (contact.created_by !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const contactData = req.body;
+      // Prevent changing created_by
+      delete contactData.created_by;
+      
+      const updatedContact = await storage.updateContact(req.params.id, contactData);
+      res.json(updatedContact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update contact" });
+    }
+  });
+
+  app.delete("/api/contacts/:id", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      // First get the contact to verify ownership
+      const contact = await storage.getContactByIdNew(req.params.id);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      // Verify the contact belongs to the user
+      if (contact.created_by !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.deleteContact(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete contact" });
+    }
+  });
+
+  app.put("/api/contacts/:id/favorite", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      // First get the contact to verify ownership
+      const contact = await storage.getContactByIdNew(req.params.id);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      // Verify the contact belongs to the user
+      if (contact.created_by !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const { isFavorite } = req.body;
+      const updatedContact = await storage.toggleFavoriteContact(req.params.id, isFavorite);
+      res.json(updatedContact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update contact favorite status" });
     }
   });
 
