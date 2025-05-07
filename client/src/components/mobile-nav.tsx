@@ -11,8 +11,8 @@ export function MobileNav({ onAddClick }: MobileNavProps) {
   
   return (
     <nav className="bottom-nav">
-      <Link href="/">
-        <a className={`nav-item ${location === "/" ? "active" : ""}`}>
+      <Link href="/home">
+        <a className={`nav-item ${location === "/home" ? "active" : ""}`}>
           <Home className="nav-item-icon" />
           <span>Feed</span>
         </a>

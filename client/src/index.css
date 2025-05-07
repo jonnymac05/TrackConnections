@@ -100,3 +100,18 @@
 .tag {
   @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary mr-1.5 mb-1.5;
 }
+
+/* Landing page styles */
+.hero-gradient {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(262 83% 58%) 100%);
+}
+
+.feature-card {
+  @apply transition-all duration-300 hover:shadow-lg hover:border-primary/50 hover:-translate-y-1;
+}
+
+@media (max-width: 768px) {
+  .container {
+    max-width: 100%;
+  }
+}

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
+import LandingPage from "@/pages/landing-page";
 import ContactListPage from "@/pages/contact-list-page";
 import ContactDetailPage from "@/pages/contact-detail-page";
 import SettingsPage from "@/pages/settings-page";
@@ -16,7 +17,8 @@ import { ProtectedRoute } from "./lib/protected-route";
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={HomePage} />
+      <Route path="/" component={LandingPage} />
+      <ProtectedRoute path="/home" component={HomePage} />
       <ProtectedRoute path="/contacts" component={ContactListPage} />
       <ProtectedRoute path="/contacts/:id" component={ContactDetailPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
