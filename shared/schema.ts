@@ -5,7 +5,7 @@ import { relations } from "drizzle-orm";
 
 // Users table
 export const connectUsers = pgTable("connect_users", {
-  id: text("id").primaryKey(), // Using text since the database has text type
+  id: uuid("id").primaryKey(), // Updated to UUID to match database
   name: text("name"),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
@@ -19,7 +19,7 @@ export const connectUsers = pgTable("connect_users", {
 // Contacts table
 export const contacts = pgTable("contacts", {
   id: uuid("id").defaultRandom().primaryKey(),
-  created_by: text("created_by").notNull().references(() => connectUsers.id), // Reference to text id in connect_users
+  created_by: uuid("created_by").notNull().references(() => connectUsers.id), // Updated to UUID to match database
   name: text("name"),
   company: text("company"),
   title: text("title"),
@@ -35,7 +35,7 @@ export const contacts = pgTable("contacts", {
 // Log entries table
 export const logEntries = pgTable("log_entries", {
   id: uuid("id").defaultRandom().primaryKey(),
-  user_id: text("user_id").notNull(), // Text type matching connect_users.id
+  user_id: uuid("user_id").notNull().references(() => connectUsers.id), // Updated to UUID to match database
   contact_id: uuid("contact_id").references(() => contacts.id),
   name: text("name"),
   company: text("company"),
@@ -52,7 +52,7 @@ export const logEntries = pgTable("log_entries", {
 // Tags table
 export const tags = pgTable("tags", {
   id: uuid("id").defaultRandom().primaryKey(),
-  user_id: text("user_id").notNull().references(() => connectUsers.id), // Reference to text id in connect_users
+  user_id: uuid("user_id").notNull().references(() => connectUsers.id), // Updated to UUID to match database
   name: text("name").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
