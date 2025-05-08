@@ -6,15 +6,15 @@ import 'dotenv/config';
 
 neonConfig.webSocketConstructor = ws;
 
-// Use the user's Neon database if the connection string is provided, 
-// otherwise fall back to the default Replit database
-const connectionString = process.env.TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING || process.env.DATABASE_URL;
+// Use the TrackConnections Neon database connection string as the default and only option
+const connectionString = process.env.TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING;
 
 if (!connectionString) {
   throw new Error(
-    "No database connection string available. Please provide either TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING or ensure DATABASE_URL is set.",
+    "TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING environment variable not set. Please provide a valid connection string for the TrackConnections database.",
   );
 }
 
+console.log("Using TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING for database connection");
 export const pool = new Pool({ connectionString });
 export const db = drizzle(pool, { schema });
