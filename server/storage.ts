@@ -85,6 +85,9 @@ export interface IStorage {
   // Search methods
   searchLogEntries(userId: string, query: string): Promise<LogEntryWithRelations[]>;
   searchContacts(userId: string, query: string): Promise<Contact[]>;
+  
+  // Enrichment methods
+  enrichLogEntry(entry: LogEntry): Promise<LogEntryWithRelations>;
 
   // Session store
   sessionStore: session.Store;
@@ -526,14 +529,15 @@ export class MemStorage implements IStorage {
 
   // New contact methods
   async getAllContacts(userId: string): Promise<ContactWithRelations[]> {
-    return Array.from(this.contacts.values())
+    const contacts = Array.from(this.contacts.values())
       .filter(contact => contact.created_by === userId)
       .sort((a, b) => {
         const nameA = a.name || '';
         const nameB = b.name || '';
         return nameA.localeCompare(nameB);
-      })
-      .map(contact => this.enrichContact(contact));
+      });
+    
+    return Promise.all(contacts.map(contact => this.enrichContact(contact)));
   }
 
   async getContactByIdNew(id: string): Promise<ContactWithRelations | undefined> {
@@ -584,14 +588,15 @@ export class MemStorage implements IStorage {
   }
 
   async getFavoriteContacts(userId: string): Promise<ContactWithRelations[]> {
-    return Array.from(this.contacts.values())
+    const favoriteContacts = Array.from(this.contacts.values())
       .filter(contact => contact.created_by === userId && contact.is_favorite)
       .sort((a, b) => {
         const nameA = a.name || '';
         const nameB = b.name || '';
         return nameA.localeCompare(nameB);
-      })
-      .map(contact => this.enrichContact(contact));
+      });
+    
+    return Promise.all(favoriteContacts.map(contact => this.enrichContact(contact)));
   }
 
   async toggleFavoriteContact(id: string, isFavorite: boolean): Promise<Contact | undefined> {

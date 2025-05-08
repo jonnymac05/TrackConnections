@@ -606,6 +606,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           uploadedMedia.push(media);
         }
         
+        // If there's a log entry, fetch the enriched version to include the newly added media
+        if (logEntryId) {
+          try {
+            const enrichedLogEntry = await storage.getLogEntryById(logEntryId);
+            if (enrichedLogEntry) {
+              // Return both the uploaded media and the enriched log entry
+              return res.status(201).json({
+                media: uploadedMedia,
+                logEntry: enrichedLogEntry
+              });
+            }
+          } catch (enrichError) {
+            console.error("Error enriching log entry after media upload:", enrichError);
+            // Continue to return just the media if enrichment fails
+          }
+        }
+        
+        // Fallback to just returning the media if no log entry was provided or if enrichment failed
         res.status(201).json(uploadedMedia);
       } catch (error) {
         console.error('Error handling file upload:', error);
