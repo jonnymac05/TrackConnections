@@ -19,7 +19,7 @@ export const connectUsers = pgTable("connect_users", {
 // Contacts table
 export const contacts = pgTable("contacts", {
   id: uuid("id").defaultRandom().primaryKey(),
-  created_by: uuid("created_by").notNull().references(() => connectUsers.id),
+  created_by: text("created_by").notNull().references(() => connectUsers.id), // Reference to text id in connect_users
   name: text("name"),
   company: text("company"),
   title: text("title"),
@@ -34,7 +34,7 @@ export const contacts = pgTable("contacts", {
 // Log entries table
 export const logEntries = pgTable("log_entries", {
   id: uuid("id").defaultRandom().primaryKey(),
-  user_id: uuid("user_id").notNull().references(() => connectUsers.id),
+  user_id: text("user_id").notNull().references(() => connectUsers.id), // Reference to text id in connect_users
   contact_id: uuid("contact_id").references(() => contacts.id),
   name: text("name"),
   company: text("company"),
@@ -51,7 +51,7 @@ export const logEntries = pgTable("log_entries", {
 // Tags table
 export const tags = pgTable("tags", {
   id: uuid("id").defaultRandom().primaryKey(),
-  user_id: uuid("user_id").notNull().references(() => connectUsers.id),
+  user_id: text("user_id").notNull().references(() => connectUsers.id), // Reference to text id in connect_users
   name: text("name").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
@@ -78,7 +78,7 @@ export const media = pgTable("media", {
 // User message templates
 export const messageTemplates = pgTable("message_templates", {
   id: uuid("id").defaultRandom().primaryKey(),
-  user_id: uuid("user_id").notNull().references(() => connectUsers.id),
+  user_id: text("user_id").notNull().references(() => connectUsers.id), // Reference to text id in connect_users
   email_template: text("email_template"),
   sms_template: text("sms_template"),
   created_at: timestamp("created_at").defaultNow().notNull(),
