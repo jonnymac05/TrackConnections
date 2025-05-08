@@ -42,6 +42,7 @@ export interface IStorage {
   deleteLogEntry(id: string): Promise<boolean>;
   getFavoriteLogEntries(userId: string): Promise<LogEntryWithRelations[]>;
   toggleFavoriteLogEntry(id: string, isFavorite: boolean): Promise<LogEntry | undefined>;
+  enrichLogEntry(entry: LogEntry): Promise<LogEntryWithRelations>;
   
   // Tag methods
   getTags(userId: string): Promise<Tag[]>;
