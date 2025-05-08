@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Mail, MessageSquare, Edit, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ContactPerson, LogEntryWithRelations } from "@shared/schema";
+import { ContactWithRelations, LogEntryWithRelations, MessageTemplate } from "@shared/schema";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { FormDialog } from "@/components/form-dialog";
 import { LogForm } from "@/components/forms/log-form";
@@ -20,24 +20,22 @@ export default function ContactDetailPage() {
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   
   // Fetch the contact details
-  const { data: contact, isLoading: isLoadingContact } = useQuery<ContactPerson>({
+  const { data: contact, isLoading: isLoadingContact } = useQuery<ContactWithRelations>({
     queryKey: [`/api/contacts/${id}`],
     queryFn: async () => {
-      // Since we don't have an explicit contact by ID endpoint, we'll fetch all contacts
-      // and filter for the one we need
-      const res = await fetch('/api/contacts', {
+      // Use the specific contact by ID endpoint
+      const res = await fetch(`/api/contacts/${id}`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to fetch contact details');
-      const contacts = await res.json();
-      const contact = contacts.find((c: ContactPerson) => c.id === id);
+      const contact = await res.json();
       if (!contact) throw new Error('Contact not found');
       return contact;
     },
   });
   
   // Fetch message templates
-  const { data: messageTemplates } = useQuery({
+  const { data: messageTemplates } = useQuery<MessageTemplate>({
     queryKey: ['/api/message-templates'],
   });
   
@@ -205,7 +203,7 @@ export default function ContactDetailPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Tags</p>
                       <div className="mt-1">
-                        {contact.tags.map((tag) => (
+                        {contact.tags.map((tag: { id: string, name: string }) => (
                           <span key={tag.id} className="tag">
                             {tag.name}
                           </span>
@@ -222,7 +220,7 @@ export default function ContactDetailPage() {
                   <h3 className="font-medium text-foreground mb-2">Interaction History</h3>
                   
                   <div className="space-y-3">
-                    {contact.logEntries.map((logEntry) => (
+                    {contact.logEntries.map((logEntry: LogEntryWithRelations) => (
                       <Card key={logEntry.id}>
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-2">
@@ -246,7 +244,7 @@ export default function ContactDetailPage() {
                           {/* Media */}
                           {logEntry.media && logEntry.media.length > 0 && (
                             <div className="mt-2">
-                              {logEntry.media[0].type === "image" ? (
+                              {logEntry.media[0].file_type?.startsWith('image/') ? (
                                 <img
                                   src={logEntry.media[0].url}
                                   alt="Interaction media"
