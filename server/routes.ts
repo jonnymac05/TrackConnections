@@ -7,6 +7,53 @@ import { z } from "zod";
 import { upload, handleUploadErrors } from "./middlewares/upload-middleware";
 import * as s3Service from "./services/s3-service";
 
+/**
+ * Cleanup unassigned media files for a user
+ * 
+ * This function finds all media items for a user that don't have a log_entry_id assigned
+ * and removes them both from the database and S3.
+ * 
+ * @param userId User ID
+ */
+async function cleanupUnassignedMedia(userId: string): Promise<void> {
+  try {
+    console.log(`Cleaning up unassigned media for user ${userId}`);
+    
+    // Get all media items for this user that don't have a log entry ID
+    const unassignedMedia = await storage.getUnassignedMedia(userId);
+    
+    if (unassignedMedia.length === 0) {
+      console.log('No unassigned media to clean up');
+      return;
+    }
+    
+    console.log(`Found ${unassignedMedia.length} unassigned media items to clean up`);
+    
+    // Delete each unassigned media item
+    for (const media of unassignedMedia) {
+      try {
+        // Delete from S3 first
+        if (media.file_key) {
+          await s3Service.deleteFileFromS3(media.file_key);
+          console.log(`Deleted file from S3: ${media.file_key}`);
+        }
+        
+        // Delete from database
+        await storage.deleteMedia(media.id);
+        console.log(`Deleted media from database: ${media.id}`);
+      } catch (error) {
+        console.error(`Error deleting media ${media.id}:`, error);
+        // Continue with other media even if one fails
+      }
+    }
+    
+    console.log(`Cleanup complete for user ${userId}`);
+  } catch (error) {
+    console.error('Error in cleanupUnassignedMedia:', error);
+    throw error;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes (/api/register, /api/login, /api/logout, /api/user)
   setupAuth(app);
@@ -38,9 +85,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
-      const { tagIds, ...logEntryData } = req.body;
+      const { tagIds, mediaIds, ...logEntryData } = req.body;
       
       console.log("Creating log entry with data:", JSON.stringify(logEntryData, null, 2));
+      console.log("Media IDs:", mediaIds);
       
       // Validate log entry data
       try {
@@ -52,8 +100,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Validated data:", JSON.stringify(validatedData, null, 2));
         
         try {
+          // Create the log entry
           const logEntry = await storage.createLogEntry(validatedData, tagIds);
           console.log("Log entry created successfully:", logEntry.id);
+          
+          // Update media records with the new log entry ID if mediaIds were provided
+          if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
+            for (const mediaId of mediaIds) {
+              try {
+                // Verify the media exists and belongs to the user
+                const media = await storage.getMediaById(mediaId);
+                
+                if (media && media.user_id === req.user.id) {
+                  // Update the media record with the log entry ID
+                  await storage.updateMedia(mediaId, { log_entry_id: logEntry.id });
+                }
+              } catch (mediaError) {
+                console.error(`Error updating media ${mediaId}:`, mediaError);
+                // Continue with other media even if one fails
+              }
+            }
+          }
+          
+          // Clean up any unassigned media for this user after successful log entry creation
+          try {
+            await cleanupUnassignedMedia(req.user.id);
+          } catch (cleanupError) {
+            console.error("Error cleaning up unassigned media:", cleanupError);
+            // Don't fail the main operation if cleanup has issues
+          }
+          
           res.status(201).json(logEntry);
         } catch (storageError) {
           console.error("Storage error creating log entry:", storageError);

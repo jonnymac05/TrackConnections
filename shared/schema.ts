@@ -83,7 +83,7 @@ export const media = pgTable("media", {
 // User message templates
 export const messageTemplates = pgTable("message_templates", {
   id: uuid("id").defaultRandom().primaryKey(),
-  user_id: text("user_id").notNull().references(() => connectUsers.id), // Reference to text id in connect_users
+  user_id: uuid("user_id").notNull().references(() => connectUsers.id), // Updated to UUID to match database
   email_template: text("email_template"),
   sms_template: text("sms_template"),
   created_at: timestamp("created_at").defaultNow().notNull(),
