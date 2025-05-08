@@ -67,7 +67,12 @@ export function MediaUpload({
   };
 
   const removeSelectedFile = (index: number) => {
+    const removedFile = selectedFiles[index];
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    
+    // Inform the parent component that the file was removed
+    const updatedFiles = selectedFiles.filter((_, i) => i !== index);
+    onFilesSelected(updatedFiles);
   };
 
   return (

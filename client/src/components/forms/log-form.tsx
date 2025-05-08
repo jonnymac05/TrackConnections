@@ -125,6 +125,48 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
   });
   
   // Save log entry mutation
+  // Upload media files mutation
+  const uploadMediaMutation = useMutation({
+    mutationFn: async ({ files, logEntryId }: { files: File[], logEntryId: string }) => {
+      // Create a FormData object to send the files
+      const formData = new FormData();
+      formData.append('logEntryId', logEntryId);
+      
+      // Append each file to the form data
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+      
+      // Send the request to upload endpoint
+      const res = await fetch('/api/media/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to upload media files');
+      }
+      
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/log-entries"] });
+      toast({
+        title: "Media Uploaded",
+        description: "Files were successfully attached to the log entry",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Media Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const saveLogEntryMutation = useMutation({
     mutationFn: async (data: LogFormValues) => {
       // Base log entry data
@@ -150,7 +192,15 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
         return await res.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (createdLogEntry) => {
+      // Upload media files if there are any
+      if (selectedFiles.length > 0) {
+        uploadMediaMutation.mutate({
+          files: selectedFiles,
+          logEntryId: createdLogEntry.id
+        });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/log-entries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       toast({
