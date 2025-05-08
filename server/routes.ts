@@ -4,8 +4,8 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { insertLogEntrySchema, insertTagSchema, insertMessageTemplateSchema, insertMediaSchema } from "@shared/schema";
 import { z } from "zod";
-import upload, { handleUploadErrors } from "./middlewares/upload-middleware";
-import s3Service from "./services/s3-service";
+import { upload, handleUploadErrors } from "./middlewares/upload-middleware";
+import * as s3Service from "./services/s3-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes (/api/register, /api/login, /api/logout, /api/user)
@@ -479,6 +479,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     handleUploadErrors, // Handle upload errors
     async (req: Request, res: Response) => {
       try {
+        // Ensure user is authenticated
+        if (!req.user) {
+          return res.status(401).json({ message: "Not authenticated" });
+        }
+
         const files = req.files as Express.Multer.File[];
         const { logEntryId } = req.body;
         
@@ -549,11 +554,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
+      // Ensure user is authenticated
+      if (!req.user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
       // Get media item
       const media = await storage.getMediaById(req.params.id);
       
       if (!media) {
         return res.status(404).json({ message: "Media not found" });
+      }
+      
+      // Since we updated our schema, we need to verify the media object has user_id
+      if (!('user_id' in media)) {
+        return res.status(500).json({ 
+          message: "Media object is missing user_id field. Schema may need updating."
+        });
       }
       
       // Verify user owns the media
@@ -562,7 +579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Delete from S3 if file_key is available
-      if (media.file_key) {
+      if ('file_key' in media && media.file_key) {
         try {
           await s3Service.deleteFileFromS3(media.file_key);
         } catch (s3Error) {

@@ -2,9 +2,11 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, X, Image, FilePlus } from "lucide-react";
 
+import { Media } from "@shared/schema";
+
 interface MediaUploadProps {
   onFilesSelected: (files: File[]) => void;
-  existingMedia?: { id: string; url: string; type: string }[];
+  existingMedia?: Media[] | { id: string; url: string; type: string }[];
   onRemoveExistingMedia?: (id: string) => void;
   maxFiles?: number;
   className?: string;
@@ -75,10 +77,20 @@ export function MediaUpload({
         <div className="grid grid-cols-2 gap-2 mb-3">
           {existingMedia.map((media) => (
             <div key={media.id} className="relative rounded-md overflow-hidden border border-border">
-              {media.type === 'image' ? (
-                <img src={media.url} alt="Uploaded media" className="w-full h-32 object-cover" />
+              {('file_type' in media) ? (
+                // For the Media type from schema
+                media.file_type.startsWith('image/') ? (
+                  <img src={media.url} alt="Uploaded media" className="w-full h-32 object-cover" />
+                ) : (
+                  <video src={media.url} className="w-full h-32 object-cover" controls />
+                )
               ) : (
-                <video src={media.url} className="w-full h-32 object-cover" controls />
+                // For the legacy interface type with 'type' property
+                media.type === 'image' ? (
+                  <img src={media.url} alt="Uploaded media" className="w-full h-32 object-cover" />
+                ) : (
+                  <video src={media.url} className="w-full h-32 object-cover" controls />
+                )
               )}
               {onRemoveExistingMedia && (
                 <button

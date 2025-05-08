@@ -69,9 +69,13 @@ export const logEntriesTags = pgTable("log_entries_tags", {
 // Media table for log entries
 export const media = pgTable("media", {
   id: uuid("id").defaultRandom().primaryKey(),
-  log_entry_id: uuid("log_entry_id").notNull().references(() => logEntries.id),
+  user_id: text("user_id").notNull().references(() => connectUsers.id), // Reference to user who uploaded
+  log_entry_id: uuid("log_entry_id").references(() => logEntries.id), // Optional reference to log entry
   url: text("url").notNull(),
-  type: text("type").notNull(), // 'image' or 'video'
+  filename: text("filename").notNull(),
+  file_key: text("file_key").notNull(), // S3 key for the file
+  file_type: text("file_type").notNull(), // MIME type
+  file_size: text("file_size").notNull(), // File size in bytes
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
