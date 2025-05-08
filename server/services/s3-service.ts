@@ -1,170 +1,124 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { randomUUID } from 'crypto';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { randomUUID } from "crypto";
 
-// Initialize S3 client
+// Create S3 client instance
 const s3Client = new S3Client({
-  region: process.env.AWS_REGION,
+  region: process.env.AWS_REGION as string,
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
-  }
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
+  },
 });
 
-// S3 bucket name for Track Connections
-const bucketName = process.env.AWS_S3_BUCKET_TRACKCONNECTIONS || '';
-const urlPrefix = process.env.AWS_S3_URL_PREFIX || '';
+// S3 bucket name
+const bucketName = process.env.AWS_S3_BUCKET_TRACKCONNECTIONS as string;
 
-// Check if all required environment variables are present
+// Validate that we have all required environment variables
 if (!process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !bucketName) {
-  console.warn('AWS S3 credentials are missing. File upload functionality will not work correctly.');
+  console.warn('WARNING: Missing AWS S3 environment variables. File upload functionality will not work.');
 }
 
 /**
- * Validates if the file type is allowed
+ * Generate a unique file key for S3
+ * @param userId User ID
+ * @param originalFilename Original filename
+ * @returns A unique file key
  */
-export const isFileTypeAllowed = (mimetype: string): boolean => {
-  const allowedTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml'
-  ];
-  
-  return allowedTypes.includes(mimetype);
-};
-
-/**
- * Generates a unique file key for S3
- */
-export const generateFileKey = (userId: string, originalname: string): string => {
-  // Get file extension
-  const fileExtension = originalname.split('.').pop() || '';
-  
-  // Generate a unique ID
+export function generateFileKey(userId: string, originalFilename: string): string {
   const uniqueId = randomUUID();
-  
-  // Format: users/{userId}/{uniqueId}.{extension}
-  return `users/${userId}/${uniqueId}.${fileExtension}`;
-};
+  const ext = originalFilename.split('.').pop() || '';
+  return `${userId}/${uniqueId}.${ext}`;
+}
 
 /**
- * Uploads a file to S3 and returns the URL
+ * Check if the file type is allowed
+ * @param mimeType MIME type of the file
+ * @returns True if the file type is allowed, false otherwise
  */
-export const uploadFileToS3 = async (
-  fileBuffer: Buffer,
-  fileKey: string,
-  mimetype: string
-): Promise<string> => {
-  // Check if S3 credentials are configured
+export function isFileTypeAllowed(mimeType: string): boolean {
+  // Only allow image files for now
+  return mimeType.startsWith('image/');
+}
+
+/**
+ * Upload a file to S3
+ * @param fileBuffer File buffer
+ * @param fileKey S3 key for the file
+ * @param contentType MIME type of the file
+ * @returns URL of the uploaded file
+ */
+export async function uploadFileToS3(fileBuffer: Buffer, fileKey: string, contentType: string): Promise<string> {
   if (!bucketName) {
-    throw new Error('AWS S3 bucket name is not configured.');
+    throw new Error('AWS_S3_BUCKET_TRACKCONNECTIONS environment variable is not set');
   }
-  
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: fileKey,
+    Body: fileBuffer,
+    ContentType: contentType,
+  });
+
   try {
-    // Configure the upload parameters
-    const params = {
-      Bucket: bucketName,
-      Key: fileKey,
-      Body: fileBuffer,
-      ContentType: mimetype
-    };
+    await s3Client.send(command);
     
-    // Upload the file to S3
-    await s3Client.send(new PutObjectCommand(params));
-    
-    // Return the public URL
-    return urlPrefix ? `${urlPrefix}/${fileKey}` : `https://${bucketName}.s3.amazonaws.com/${fileKey}`;
+    // Return the URL of the uploaded file
+    // Check if we have a URL prefix from env vars, otherwise construct S3 URL
+    if (process.env.AWS_S3_URL_PREFIX) {
+      return `${process.env.AWS_S3_URL_PREFIX}/${fileKey}`;
+    } else {
+      return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+    }
   } catch (error) {
     console.error('Error uploading file to S3:', error);
-    throw new Error('Failed to upload file to S3.');
+    throw new Error('Failed to upload file to S3');
   }
-};
+}
 
 /**
- * Deletes a file from S3
+ * Delete a file from S3
+ * @param fileKey S3 key for the file
  */
-export const deleteFileFromS3 = async (fileKey: string): Promise<void> => {
-  // Check if S3 credentials are configured
+export async function deleteFileFromS3(fileKey: string): Promise<void> {
   if (!bucketName) {
-    throw new Error('AWS S3 bucket name is not configured.');
+    throw new Error('AWS_S3_BUCKET_TRACKCONNECTIONS environment variable is not set');
   }
-  
+
+  const command = new DeleteObjectCommand({
+    Bucket: bucketName,
+    Key: fileKey,
+  });
+
   try {
-    // Configure the delete parameters
-    const params = {
-      Bucket: bucketName,
-      Key: fileKey
-    };
-    
-    // Delete the file from S3
-    await s3Client.send(new DeleteObjectCommand(params));
+    await s3Client.send(command);
   } catch (error) {
     console.error('Error deleting file from S3:', error);
-    throw new Error('Failed to delete file from S3.');
+    throw new Error('Failed to delete file from S3');
   }
-};
+}
 
 /**
- * Extracts the file key from a full S3 URL
+ * Generate a presigned URL for a file in S3
+ * @param fileKey S3 key for the file
+ * @param expiresIn Expiration time in seconds (default: 3600)
+ * @returns Presigned URL
  */
-export const getFileKeyFromUrl = (url: string): string => {
-  if (urlPrefix && url.startsWith(urlPrefix)) {
-    // Remove URL prefix if present
-    return url.substring(urlPrefix.length + 1); // +1 for the trailing slash
-  }
-  
-  // Extract from standard S3 URL
-  const matches = url.match(/https:\/\/.*\.s3\.amazonaws\.com\/(.*)/);
-  if (matches && matches[1]) {
-    return matches[1];
-  }
-  
-  // If it's already a key (not a full URL)
-  if (!url.startsWith('http')) {
-    return url;
-  }
-  
-  throw new Error('Invalid S3 URL format');
-};
-
-/**
- * Generates a presigned URL for a file in S3 that expires after a specified duration
- */
-export const generatePresignedUrl = async (
-  fileKey: string,
-  expiresIn = 3600 // 1 hour by default
-): Promise<string> => {
-  // Check if S3 credentials are configured
+export async function generatePresignedUrl(fileKey: string, expiresIn = 3600): Promise<string> {
   if (!bucketName) {
-    throw new Error('AWS S3 bucket name is not configured.');
+    throw new Error('AWS_S3_BUCKET_TRACKCONNECTIONS environment variable is not set');
   }
-  
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: fileKey,
+  });
+
   try {
-    // Configure the parameters
-    const params = {
-      Bucket: bucketName,
-      Key: fileKey
-    };
-    
-    // Generate a presigned URL for the object
-    const command = new PutObjectCommand(params);
-    const url = await getSignedUrl(s3Client, command, { expiresIn });
-    
-    return url;
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+    return signedUrl;
   } catch (error) {
     console.error('Error generating presigned URL:', error);
-    throw new Error('Failed to generate presigned URL.');
+    throw new Error('Failed to generate presigned URL');
   }
-};
-
-export default {
-  isFileTypeAllowed,
-  generateFileKey,
-  uploadFileToS3,
-  deleteFileFromS3,
-  getFileKeyFromUrl,
-  generatePresignedUrl
-};
+}
