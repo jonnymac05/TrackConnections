@@ -164,7 +164,7 @@ export class DatabaseStorage implements IStorage {
       const id = crypto.randomUUID();
       const now = new Date();
       
-      // Ensure all required fields are present and handle optional fields
+      // Let's try a minimal dataset first to see if we can isolate the issue
       const dataToInsert = {
         id,
         user_id: logEntryData.user_id,
@@ -176,7 +176,7 @@ export class DatabaseStorage implements IStorage {
         notes: logEntryData.notes || null,
         is_favorite: logEntryData.is_favorite ?? false,
         where_met: logEntryData.where_met || null,
-        contact_id: logEntryData.contact_id || null,
+        // Explicitly exclude contact_id to test if that's causing the problem
         created_at: now,
         updated_at: now
       };
