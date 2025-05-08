@@ -100,11 +100,15 @@ async function runMigration() {
     const createMediaTable = `
       CREATE TABLE IF NOT EXISTS media (
         id UUID PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES connect_users(id),
+        log_entry_id UUID REFERENCES log_entries(id),
         url TEXT NOT NULL,
-        type TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        file_key TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER,
         created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-        log_entry_id UUID NOT NULL REFERENCES log_entries(id)
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
       );
     `;
     

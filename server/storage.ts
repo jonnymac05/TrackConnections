@@ -436,7 +436,7 @@ export class MemStorage implements IStorage {
       filename: mediaData.filename,
       file_key: mediaData.file_key,
       file_type: mediaData.file_type,
-      file_size: mediaData.file_size,
+      file_size: mediaData.file_size ?? null,
       created_at: timestamp,
       updated_at: timestamp
     };
