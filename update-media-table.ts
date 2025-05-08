@@ -1,108 +1,74 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
+import { Pool } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from 'ws';
+import { neonConfig } from '@neondatabase/serverless';
+import 'dotenv/config';
 
-// Configure Neon to use the ws package as WebSocket
+// Configure neon to use WebSocket
 neonConfig.webSocketConstructor = ws;
 
 async function updateMediaTable() {
-  if (!process.env.DATABASE_URL) {
-    console.error('No DATABASE_URL environment variable found');
+  console.log('Connecting to Neon database using TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING...');
+  
+  // Use the specific connection string for Track Connections
+  const connectionString = process.env.TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING;
+  
+  if (!connectionString) {
+    console.error('TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING environment variable not set');
     process.exit(1);
   }
-
-  console.log('Connecting to database...');
   
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-  console.log('Updating media table...');
-
+  const pool = new Pool({ connectionString });
+  
   try {
+    console.log('Running media table update...');
+    
+    // First, check if there's any existing data in the media table that we need to preserve
+    const existingMedia = await pool.query('SELECT COUNT(*) FROM information_schema.tables WHERE table_name = \'media\'');
+    const tableExists = parseInt(existingMedia.rows[0].count) > 0;
+    
+    if (tableExists) {
+      console.log('- Media table exists, dropping it to recreate with correct schema');
+      // Drop existing foreign key constraints first
+      await pool.query('ALTER TABLE IF EXISTS media DROP CONSTRAINT IF EXISTS media_user_id_fkey');
+      await pool.query('ALTER TABLE IF EXISTS media DROP CONSTRAINT IF EXISTS media_log_entry_id_fkey');
+      // Then drop the table
+      await pool.query('DROP TABLE IF EXISTS media');
+    } else {
+      console.log('- No media table found, creating it from scratch');
+    }
+    
+    // Create the media table with the correct schema
     await pool.query(`
-      -- Check if user_id column exists in media table
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'media' AND column_name = 'user_id'
-        ) THEN
-          -- Add user_id column to media table
-          ALTER TABLE media ADD COLUMN user_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
-          -- Update the foreign key separately
-          ALTER TABLE media ADD CONSTRAINT media_user_id_fkey FOREIGN KEY (user_id) REFERENCES connect_users(id);
-        END IF;
-      END
-      $$;
-
-      -- Check if filename column exists in media table
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'media' AND column_name = 'filename'
-        ) THEN
-          -- Add filename column to media table
-          ALTER TABLE media ADD COLUMN filename TEXT NOT NULL DEFAULT '';
-        END IF;
-      END
-      $$;
-
-      -- Check if file_key column exists in media table
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'media' AND column_name = 'file_key'
-        ) THEN
-          -- Add file_key column to media table
-          ALTER TABLE media ADD COLUMN file_key TEXT NOT NULL DEFAULT '';
-        END IF;
-      END
-      $$;
-
-      -- Check if file_size column exists in media table
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'media' AND column_name = 'file_size'
-        ) THEN
-          -- Add file_size column to media table
-          ALTER TABLE media ADD COLUMN file_size TEXT NOT NULL DEFAULT '0';
-        END IF;
-      END
-      $$;
-
-      -- Rename 'type' column to 'file_type' if it exists and file_type doesn't exist
-      DO $$
-      BEGIN
-        IF EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'media' AND column_name = 'type'
-        ) AND NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'media' AND column_name = 'file_type'
-        ) THEN
-          -- Rename type column to file_type
-          ALTER TABLE media RENAME COLUMN type TO file_type;
-        ELSIF NOT EXISTS (
-          SELECT 1
-          FROM information_schema.columns
-          WHERE table_name = 'media' AND column_name = 'file_type'
-        ) THEN
-          -- Add file_type column if neither exists
-          ALTER TABLE media ADD COLUMN file_type TEXT NOT NULL DEFAULT '';
-        END IF;
-      END
-      $$;
+      CREATE TABLE media (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES connect_users(id),
+        log_entry_id UUID REFERENCES log_entries(id),
+        url TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        file_key TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+      )
     `);
-
-    console.log('Media table updated successfully');
+    console.log('- Created media table with correct schema');
+    
+    // Verify the table structure
+    const columns = await pool.query(`
+      SELECT column_name, data_type, is_nullable 
+      FROM information_schema.columns 
+      WHERE table_name = 'media' 
+      ORDER BY ordinal_position
+    `);
+    
+    console.log('- Table structure verification:');
+    columns.rows.forEach(col => {
+      console.log(`  - ${col.column_name}: ${col.data_type} (${col.is_nullable === 'YES' ? 'nullable' : 'not null'})`);
+    });
+    
+    console.log('Media table update completed successfully!');
   } catch (error) {
     console.error('Error updating media table:', error);
     process.exit(1);
@@ -111,4 +77,5 @@ async function updateMediaTable() {
   }
 }
 
+// Run the function
 updateMediaTable();
