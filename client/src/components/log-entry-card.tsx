@@ -9,6 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog";
 
+// Helper function to check if a file is an image based on mime type
+const isImageFile = (fileType: string): boolean => {
+  return fileType.startsWith('image/');
+};
+
 interface LogEntryCardProps {
   logEntry: LogEntryWithRelations;
   onEdit: (logEntry: LogEntryWithRelations) => void;
@@ -140,25 +145,92 @@ export function LogEntryCard({ logEntry, onEdit }: LogEntryCardProps) {
         {/* Media */}
         {logEntry.media && logEntry.media.length > 0 && (
           <div className="mb-3">
-            {logEntry.media[0].type === "image" ? (
-              <img
-                src={logEntry.media[0].url}
-                alt="Connection media"
-                className="rounded-md w-full h-auto"
-              />
-            ) : (
-              <video
-                src={logEntry.media[0].url}
-                controls
-                className="rounded-md w-full h-auto"
-              />
-            )}
-            {logEntry.media.length > 1 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                +{logEntry.media.length - 1} more
-              </p>
-            )}
+            <div 
+              className="relative rounded-md overflow-hidden cursor-pointer" 
+              onClick={() => {
+                setCurrentMediaIndex(0);
+                setMediaGalleryOpen(true);
+              }}
+            >
+              {isImageFile(logEntry.media[0].file_type) ? (
+                <img
+                  src={logEntry.media[0].url}
+                  alt="Connection media"
+                  className="rounded-md w-full h-auto max-h-52 object-cover"
+                />
+              ) : (
+                <video
+                  src={logEntry.media[0].url}
+                  controls
+                  className="rounded-md w-full h-auto max-h-52 object-cover"
+                />
+              )}
+              {logEntry.media.length > 1 && (
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                  +{logEntry.media.length - 1} more
+                </div>
+              )}
+            </div>
           </div>
+        )}
+        
+        {/* Media Gallery Dialog */}
+        {logEntry.media && logEntry.media.length > 0 && (
+          <Dialog open={mediaGalleryOpen} onOpenChange={setMediaGalleryOpen}>
+            <DialogContent className="max-w-3xl w-[90vw] p-0 bg-background border border-border">
+              <div className="relative h-[70vh] flex items-center justify-center bg-black">
+                {/* Close Button */}
+                <button 
+                  className="absolute top-2 right-2 z-10 bg-black/50 p-1 rounded-full text-white hover:bg-black/80"
+                  onClick={() => setMediaGalleryOpen(false)}
+                >
+                  <X className="h-6 w-6" />
+                </button>
+                
+                {/* Current Media */}
+                {logEntry.media && isImageFile(logEntry.media[currentMediaIndex].file_type) ? (
+                  <img
+                    src={logEntry.media[currentMediaIndex].url}
+                    alt={`Media ${currentMediaIndex + 1}`}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <video
+                    src={logEntry.media ? logEntry.media[currentMediaIndex].url : ''}
+                    controls
+                    className="max-h-full max-w-full"
+                  />
+                )}
+                
+                {/* Navigation Buttons - Only show if there are multiple media items */}
+                {logEntry.media && logEntry.media.length > 1 && (
+                  <>
+                    <button 
+                      className="absolute left-2 bg-black/50 p-2 rounded-full text-white hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed"
+                      onClick={() => setCurrentMediaIndex(prev => Math.max(0, prev - 1))}
+                      disabled={currentMediaIndex === 0}
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button 
+                      className="absolute right-2 bg-black/50 p-2 rounded-full text-white hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed"
+                      onClick={() => setCurrentMediaIndex(prev => Math.min(logEntry.media ? logEntry.media.length - 1 : 0, prev + 1))}
+                      disabled={logEntry.media && currentMediaIndex === logEntry.media.length - 1}
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+              </div>
+              
+              {/* Thumbnails/Counter */}
+              <div className="p-3 bg-card text-center">
+                <p className="text-sm text-card-foreground">
+                  {currentMediaIndex + 1} of {logEntry.media ? logEntry.media.length : 0}
+                </p>
+              </div>
+            </DialogContent>
+          </Dialog>
         )}
         
         {/* Footer with date and actions */}
