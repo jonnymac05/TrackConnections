@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, Edit, Trash2, Loader2 } from "lucide-react";
-import { LogEntryWithRelations } from "@shared/schema";
+import { Star, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { LogEntryWithRelations, Media } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog";
 
 interface LogEntryCardProps {
   logEntry: LogEntryWithRelations;
@@ -16,6 +17,8 @@ interface LogEntryCardProps {
 export function LogEntryCard({ logEntry, onEdit }: LogEntryCardProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [mediaGalleryOpen, setMediaGalleryOpen] = useState(false);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   
   const toggleFavoriteMutation = useMutation({
     mutationFn: async (isFavorite: boolean) => {
