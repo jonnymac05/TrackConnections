@@ -58,6 +58,8 @@ export interface IStorage {
   getMediaForLogEntry(logEntryId: string): Promise<Media[]>;
   getMediaById(id: string): Promise<Media | undefined>;
   addMediaToLogEntry(media: InsertMedia): Promise<Media>;
+  updateMedia(id: string, mediaData: Partial<Media>): Promise<Media | undefined>;
+  getUnassignedMedia(userId: string): Promise<Media[]>;
   deleteMedia(id: string): Promise<boolean>;
   
   // Message template methods
@@ -433,6 +435,28 @@ export class MemStorage implements IStorage {
     
     this.mediaItems.set(id, media);
     return media;
+  }
+
+  async updateMedia(id: string, mediaData: Partial<Media>): Promise<Media | undefined> {
+    const media = this.mediaItems.get(id);
+    if (!media) return undefined;
+    
+    const updatedMedia: Media = {
+      ...media,
+      ...mediaData,
+      updated_at: new Date()
+    };
+    
+    this.mediaItems.set(id, updatedMedia);
+    return updatedMedia;
+  }
+  
+  async getUnassignedMedia(userId: string): Promise<Media[]> {
+    return Array.from(this.mediaItems.values())
+      .filter(media => media.user_id === userId && !media.log_entry_id)
+      .sort((a, b) => {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
   }
 
   async deleteMedia(id: string): Promise<boolean> {

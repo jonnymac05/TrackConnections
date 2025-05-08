@@ -516,6 +516,38 @@ export class DatabaseStorage implements IStorage {
     return mediaItem;
   }
 
+  async updateMedia(id: string, mediaData: Partial<Media>): Promise<Media | undefined> {
+    // Ensure we don't try to update the id
+    const { id: _, ...updateData } = mediaData;
+    
+    const now = new Date();
+    
+    // Update the media
+    const [updatedMedia] = await db
+      .update(media)
+      .set({ 
+        ...updateData,
+        updated_at: now 
+      })
+      .where(eq(media.id, id))
+      .returning();
+    
+    return updatedMedia;
+  }
+  
+  async getUnassignedMedia(userId: string): Promise<Media[]> {
+    return db
+      .select()
+      .from(media)
+      .where(
+        and(
+          eq(media.user_id, userId),
+          isNull(media.log_entry_id)
+        )
+      )
+      .orderBy(media.created_at);
+  }
+
   async deleteMedia(id: string): Promise<boolean> {
     await db
       .delete(media)
