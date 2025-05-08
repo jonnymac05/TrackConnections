@@ -128,10 +128,12 @@ export class MemStorage implements IStorage {
     const id = uuidv4();
     const user: User = {
       id,
-      ...userData,
-      roles: userData.roles || [],
-      stripe_customer_id: userData.stripe_customer_id || null,
-      stripe_subscription_id: userData.stripe_subscription_id || null,
+      name: userData.name ?? null,
+      email: userData.email,
+      password: userData.password,
+      roles: userData.roles ?? ["user"],
+      stripe_customer_id: userData.stripe_customer_id ?? null,
+      stripe_subscription_id: userData.stripe_subscription_id ?? null,
       created_at: timestamp,
       updated_at: timestamp
     };
@@ -428,7 +430,13 @@ export class MemStorage implements IStorage {
     const id = uuidv4();
     const media: Media = {
       id,
-      ...mediaData,
+      user_id: mediaData.user_id,
+      log_entry_id: mediaData.log_entry_id ?? null,
+      url: mediaData.url,
+      filename: mediaData.filename,
+      file_key: mediaData.file_key,
+      file_type: mediaData.file_type,
+      file_size: mediaData.file_size,
       created_at: timestamp,
       updated_at: timestamp
     };
@@ -538,8 +546,15 @@ export class MemStorage implements IStorage {
     const id = uuidv4();
     const contact: Contact = {
       id,
-      ...contactData,
-      is_favorite: contactData.is_favorite || false,
+      name: contactData.name ?? null,
+      email: contactData.email ?? null,
+      phone: contactData.phone ?? null,
+      company: contactData.company ?? null,
+      title: contactData.title ?? null,
+      where_met: contactData.where_met ?? null,
+      notes: contactData.notes ?? null,
+      is_favorite: contactData.is_favorite ?? false,
+      created_by: contactData.created_by,
       created_at: timestamp,
       updated_at: timestamp
     };
