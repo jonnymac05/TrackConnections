@@ -7,7 +7,7 @@ import {
   contacts, Contact, InsertContact, ContactWithRelations
 } from "@shared/schema";
 import { IStorage } from "./storage";
-import { eq, and, like, or, desc } from "drizzle-orm";
+import { eq, and, like, or, desc, isNull } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import session from "express-session";
 import crypto from "crypto";
