@@ -80,6 +80,7 @@ export interface IStorage {
   deleteContact(id: string): Promise<boolean>;
   getFavoriteContacts(userId: string): Promise<ContactWithRelations[]>;
   toggleFavoriteContact(id: string, isFavorite: boolean): Promise<Contact | undefined>;
+  enrichContact(contact: Contact): Promise<ContactWithRelations>;
   
   // Search methods
   searchLogEntries(userId: string, query: string): Promise<LogEntryWithRelations[]>;
@@ -607,17 +608,19 @@ export class MemStorage implements IStorage {
     return updatedContact;
   }
 
-  // Helper method to enrich a contact with its related data
-  private enrichContact(contact: Contact): ContactWithRelations {
-    const logEntries = Array.from(this.logEntries.values())
+  // Method to enrich a contact with its related data
+  async enrichContact(contact: Contact): Promise<ContactWithRelations> {
+    const relatedEntries = Array.from(this.logEntries.values())
       .filter(entry => entry.contact_id === contact.id)
       .sort((a, b) => {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
     
+    const enrichedEntries = await Promise.all(relatedEntries.map(entry => this.enrichLogEntry(entry)));
+    
     return {
       ...contact,
-      logEntries
+      logEntries: enrichedEntries
     };
   }
 
@@ -681,7 +684,7 @@ export class MemStorage implements IStorage {
   }
 
   // Helper method to enrich a log entry with its related entities
-  private async enrichLogEntry(entry: LogEntry): Promise<LogEntryWithRelations> {
+  async enrichLogEntry(entry: LogEntry): Promise<LogEntryWithRelations> {
     // Get tags for this entry
     const logEntryTags = Array.from(this.logEntriesTags.values())
       .filter(item => item.log_entry_id === entry.id);

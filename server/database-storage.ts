@@ -700,8 +700,8 @@ export class DatabaseStorage implements IStorage {
     return contact;
   }
 
-  // Helper method to enrich a contact with its related log entries
-  private async enrichContact(contact: Contact): Promise<ContactWithRelations> {
+  // Method to enrich a contact with its related log entries
+  async enrichContact(contact: Contact): Promise<ContactWithRelations> {
     // Find log entries for this contact
     const relatedEntries = await db
       .select()
@@ -772,8 +772,8 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Helper method to enrich a log entry with its related data
-  private async enrichLogEntry(entry: LogEntry): Promise<LogEntryWithRelations> {
+  // Method to enrich a log entry with its related data
+  async enrichLogEntry(entry: LogEntry): Promise<LogEntryWithRelations> {
     try {
       console.log("Starting enrichLogEntry for entry:", entry.id);
       
