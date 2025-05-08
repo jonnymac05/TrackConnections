@@ -446,6 +446,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to perform search" });
     }
   });
+  
+  // Search Contacts API
+  app.get("/api/search/contacts", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const query = req.query.q as string;
+      
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      
+      const results = await storage.searchContacts(req.user.id, query);
+      res.json(results);
+    } catch (error) {
+      console.error("Error in /api/search/contacts:", error);
+      res.status(500).json({ message: "Failed to search contacts" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

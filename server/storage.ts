@@ -77,8 +77,9 @@ export interface IStorage {
   getFavoriteContacts(userId: string): Promise<ContactWithRelations[]>;
   toggleFavoriteContact(id: string, isFavorite: boolean): Promise<Contact | undefined>;
   
-  // Search method
+  // Search methods
   searchLogEntries(userId: string, query: string): Promise<LogEntryWithRelations[]>;
+  searchContacts(userId: string, query: string): Promise<Contact[]>;
 
   // Session store
   sessionStore: session.Store;
@@ -614,6 +615,24 @@ export class MemStorage implements IStorage {
     }
     
     return enrichedEntries;
+  }
+
+  async searchContacts(userId: string, query: string): Promise<Contact[]> {
+    // Case-insensitive search
+    query = query.toLowerCase();
+    
+    return Array.from(this.contacts.values())
+      .filter(contact => contact.created_by === userId)
+      .filter(contact => {
+        // Only return contacts that match the search query
+        return (
+          (contact.name?.toLowerCase().includes(query)) ||
+          (contact.company?.toLowerCase().includes(query)) ||
+          (contact.title?.toLowerCase().includes(query)) ||
+          (contact.email?.toLowerCase().includes(query))
+        );
+      })
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   }
 
   // Helper method to enrich a log entry with its related entities

@@ -669,6 +669,36 @@ export class DatabaseStorage implements IStorage {
     
     return await Promise.all(entries.map(entry => this.enrichLogEntry(entry)));
   }
+  
+  async searchContacts(userId: string, query: string): Promise<Contact[]> {
+    query = `%${query.toLowerCase()}%`;
+    
+    try {
+      console.log(`Searching contacts for user ${userId} with query '${query}'`);
+      
+      const result = await db
+        .select()
+        .from(contacts)
+        .where(
+          and(
+            eq(contacts.created_by, userId),
+            or(
+              like(contacts.name, query),
+              like(contacts.company, query),
+              like(contacts.title, query),
+              like(contacts.email, query)
+            )
+          )
+        )
+        .orderBy(contacts.name);
+      
+      console.log(`Found ${result.length} contacts matching query`);
+      return result;
+    } catch (error) {
+      console.error("Error searching contacts:", error);
+      return [];
+    }
+  }
 
   // Helper method to enrich a log entry with its related data
   private async enrichLogEntry(entry: LogEntry): Promise<LogEntryWithRelations> {
