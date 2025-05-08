@@ -69,7 +69,7 @@ export const logEntriesTags = pgTable("log_entries_tags", {
 // Media table for log entries
 export const media = pgTable("media", {
   id: uuid("id").defaultRandom().primaryKey(),
-  user_id: text("user_id").notNull().references(() => connectUsers.id), // Reference to user who uploaded
+  user_id: uuid("user_id").notNull().references(() => connectUsers.id), // Updated to UUID to match database
   log_entry_id: uuid("log_entry_id").references(() => logEntries.id), // Optional reference to log entry
   url: text("url").notNull(),
   filename: text("filename").notNull(),
