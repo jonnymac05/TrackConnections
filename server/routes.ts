@@ -85,10 +85,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
     try {
-      const { tagIds, mediaIds, ...logEntryData } = req.body;
+      const { tagIds, ...logEntryData } = req.body;
       
       console.log("Creating log entry with data:", JSON.stringify(logEntryData, null, 2));
-      console.log("Media IDs:", mediaIds);
+      // console.log("Media IDs:", mediaIds);
       
       // Validate log entry data
       try {
@@ -104,31 +104,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const logEntry = await storage.createLogEntry(validatedData, tagIds);
           console.log("Log entry created successfully:", logEntry.id);
           
-          // Update media records with the new log entry ID if mediaIds were provided
-          if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
-            for (const mediaId of mediaIds) {
-              try {
-                // Verify the media exists and belongs to the user
-                const media = await storage.getMediaById(mediaId);
+          // // Update media records with the new log entry ID if mediaIds were provided
+          // if (mediaIds && Array.isArray(mediaIds) && mediaIds.length > 0) {
+          //   for (const mediaId of mediaIds) {
+          //     try {
+          //       // Verify the media exists and belongs to the user
+          //       const media = await storage.getMediaById(mediaId);
                 
-                if (media && media.user_id === req.user.id) {
-                  // Update the media record with the log entry ID
-                  await storage.updateMedia(mediaId, { log_entry_id: logEntry.id });
-                }
-              } catch (mediaError) {
-                console.error(`Error updating media ${mediaId}:`, mediaError);
-                // Continue with other media even if one fails
-              }
-            }
-          }
-          
-          // Clean up any unassigned media for this user after successful log entry creation
-          try {
-            await cleanupUnassignedMedia(req.user.id);
-          } catch (cleanupError) {
-            console.error("Error cleaning up unassigned media:", cleanupError);
-            // Don't fail the main operation if cleanup has issues
-          }
+          //       if (media && media.user_id === req.user.id) {
+          //         // Update the media record with the log entry ID
+          //         await storage.updateMedia(mediaId, { log_entry_id: logEntry.id });
+          //       }
+          //     } catch (mediaError) {
+          //       console.error(`Error updating media ${mediaId}:`, mediaError);
+          //       // Continue with other media even if one fails
+          //     }
+          //   }
+          // }
           
           res.status(201).json(logEntry);
         } catch (storageError) {

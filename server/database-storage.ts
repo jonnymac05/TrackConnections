@@ -816,19 +816,19 @@ export class DatabaseStorage implements IStorage {
         // Continue with an empty tags array
       }
       
-      try {
-        // Get media for this entry
-        console.log("Getting media for log entry:", entry.id);
-        entryMedia = await db
-          .select()
-          .from(media)
-          .where(eq(media.log_entry_id, entry.id));
+      // try {
+      //   // Get media for this entry
+      //   console.log("Getting media for log entry:", entry.id);
+      //   entryMedia = await db
+      //     .select()
+      //     .from(media)
+      //     .where(eq(media.log_entry_id, entry.id));
         
-        console.log(`Found ${entryMedia.length} media items for log entry`);
-      } catch (mediaError) {
-        console.error("Error fetching media for log entry:", mediaError);
-        // Continue with an empty media array
-      }
+      //   console.log(`Found ${entryMedia.length} media items for log entry`);
+      // } catch (mediaError) {
+      //   console.error("Error fetching media for log entry:", mediaError);
+      //   // Continue with an empty media array
+      // }
       
       try {
         // Get associated contact if any
