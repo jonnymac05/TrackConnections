@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { Helmet } from "react-helmet";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Mail, MessageSquare, Edit, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, MessageSquare, Edit, Trash2, Loader2, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ContactWithRelations, LogEntryWithRelations, MessageTemplate } from "@shared/schema";
@@ -12,12 +12,16 @@ import { LogForm } from "@/components/forms/log-form";
 import { MobileNav } from "@/components/mobile-nav";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [formDialogOpen, setFormDialogOpen] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState(false);
   
   // Fetch the contact details
   const { data: contact, isLoading: isLoadingContact } = useQuery<ContactWithRelations>({
@@ -76,6 +80,33 @@ export default function ContactDetailPage() {
   // Format date for display
   const formatDate = (date: Date) => {
     return formatDistanceToNow(new Date(date), { addSuffix: true });
+  };
+  
+  // Copy to clipboard functions
+  const copyToClipboard = async (text: string, type: 'email' | 'phone') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      
+      if (type === 'email') {
+        setCopiedEmail(true);
+        setTimeout(() => setCopiedEmail(false), 2000);
+      } else {
+        setCopiedPhone(true);
+        setTimeout(() => setCopiedPhone(false), 2000);
+      }
+      
+      toast({
+        title: "Copied to clipboard",
+        description: `${type === 'email' ? 'Email' : 'Phone number'} copied to clipboard`,
+      });
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
@@ -181,14 +212,44 @@ export default function ContactDetailPage() {
                   {contact.email && (
                     <div>
                       <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="text-foreground">{contact.email}</p>
+                      <div className="flex items-center justify-between group">
+                        <p 
+                          className="text-foreground group-hover:text-primary cursor-pointer transition-colors" 
+                          onClick={() => copyToClipboard(contact.email || '', 'email')}
+                        >
+                          {contact.email}
+                        </p>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => copyToClipboard(contact.email || '', 'email')}
+                          className="h-8 w-8 p-0"
+                        >
+                          {copiedEmail ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </div>
                   )}
                   
                   {contact.phone && (
                     <div>
                       <p className="text-sm text-muted-foreground">Phone</p>
-                      <p className="text-foreground">{contact.phone}</p>
+                      <div className="flex items-center justify-between group">
+                        <p 
+                          className="text-foreground group-hover:text-primary cursor-pointer transition-colors" 
+                          onClick={() => copyToClipboard(contact.phone || '', 'phone')}
+                        >
+                          {contact.phone}
+                        </p>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => copyToClipboard(contact.phone || '', 'phone')}
+                          className="h-8 w-8 p-0"
+                        >
+                          {copiedPhone ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </div>
                   )}
                   
