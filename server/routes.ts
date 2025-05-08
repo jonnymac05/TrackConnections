@@ -38,20 +38,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { tagIds, ...logEntryData } = req.body;
       
+      console.log("Creating log entry with data:", JSON.stringify(logEntryData, null, 2));
+      
       // Validate log entry data
-      const validatedData = insertLogEntrySchema.parse({
-        ...logEntryData,
-        user_id: req.user.id,
-      });
-
-      const logEntry = await storage.createLogEntry(validatedData, tagIds);
-      res.status(201).json(logEntry);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid log entry data", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Failed to create log entry" });
+      try {
+        const validatedData = insertLogEntrySchema.parse({
+          ...logEntryData,
+          user_id: req.user.id,
+        });
+        
+        console.log("Validated data:", JSON.stringify(validatedData, null, 2));
+        
+        try {
+          const logEntry = await storage.createLogEntry(validatedData, tagIds);
+          console.log("Log entry created successfully:", logEntry.id);
+          res.status(201).json(logEntry);
+        } catch (storageError) {
+          console.error("Storage error creating log entry:", storageError);
+          console.error(storageError instanceof Error ? storageError.stack : "Unknown error type");
+          res.status(500).json({ 
+            message: "Failed to create log entry in storage", 
+            error: storageError instanceof Error ? storageError.message : String(storageError) 
+          });
+        }
+      } catch (validationError) {
+        console.error("Validation error:", validationError);
+        if (validationError instanceof z.ZodError) {
+          res.status(400).json({ message: "Invalid log entry data", errors: validationError.errors });
+        } else {
+          res.status(400).json({ 
+            message: "Validation error", 
+            error: validationError instanceof Error ? validationError.message : String(validationError) 
+          });
+        }
       }
+    } catch (error) {
+      console.error("Unexpected error in log entry creation:", error);
+      console.error(error instanceof Error ? error.stack : "Unknown error type");
+      res.status(500).json({ 
+        message: "Failed to create log entry", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 

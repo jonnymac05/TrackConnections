@@ -102,13 +102,47 @@ export class DatabaseStorage implements IStorage {
 
   // Log entry methods
   async getLogEntries(userId: string): Promise<LogEntryWithRelations[]> {
-    const entries = await db
-      .select()
-      .from(logEntries)
-      .where(eq(logEntries.user_id, userId))
-      .orderBy(logEntries.created_at);
-    
-    return await Promise.all(entries.map(entry => this.enrichLogEntry(entry)));
+    try {
+      console.log("Getting log entries for user:", userId);
+      
+      const entries = await db
+        .select()
+        .from(logEntries)
+        .where(eq(logEntries.user_id, userId))
+        .orderBy(desc(logEntries.created_at));
+      
+      console.log(`Found ${entries.length} log entries for user ${userId}`);
+      
+      if (entries.length === 0) {
+        return [];
+      }
+      
+      try {
+        // Enrich each entry with its related data
+        const enrichedEntries = await Promise.all(
+          entries.map(async (entry) => {
+            try {
+              return await this.enrichLogEntry(entry);
+            } catch (enrichError) {
+              console.error(`Error enriching log entry ${entry.id}:`, enrichError);
+              // Return basic entry if enrichment fails
+              return { ...entry, tags: [], media: [], contact: undefined };
+            }
+          })
+        );
+        
+        console.log(`Successfully enriched ${enrichedEntries.length} entries`);
+        return enrichedEntries;
+      } catch (enrichError) {
+        console.error("Error enriching log entries:", enrichError);
+        // Return basic entries if enrichment fails
+        return entries.map(entry => ({ ...entry, tags: [], media: [], contact: undefined }));
+      }
+    } catch (error) {
+      console.error("Error in getLogEntries:", error);
+      console.error(error instanceof Error ? error.stack : "Unknown error type");
+      throw error;
+    }
   }
 
   async getLogEntryById(id: string): Promise<LogEntryWithRelations | undefined> {
@@ -123,29 +157,75 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLogEntry(logEntryData: InsertLogEntry, tagIds: string[] = []): Promise<LogEntryWithRelations> {
-    // Generate a UUID for the log entry
-    const id = crypto.randomUUID();
-    const now = new Date();
-    
-    const [entry] = await db
-      .insert(logEntries)
-      .values({ 
-        id, 
-        ...logEntryData,
+    try {
+      console.log("Starting createLogEntry in database-storage with data:", JSON.stringify(logEntryData, null, 2));
+      
+      // Generate a UUID for the log entry
+      const id = crypto.randomUUID();
+      const now = new Date();
+      
+      // Ensure all required fields are present and handle optional fields
+      const dataToInsert = {
+        id,
+        user_id: logEntryData.user_id,
+        name: logEntryData.name || null,
+        email: logEntryData.email || null,
+        company: logEntryData.company || null,
+        title: logEntryData.title || null,
+        phone: logEntryData.phone || null,
+        notes: logEntryData.notes || null,
+        is_favorite: logEntryData.is_favorite ?? false,
+        where_met: logEntryData.where_met || null,
+        contact_id: logEntryData.contact_id || null,
         created_at: now,
         updated_at: now
-      })
-      .returning();
-    
-    // Add tags if provided
-    for (const tagId of tagIds) {
-      await this.addTagToLogEntry({
-        log_entry_id: entry.id,
-        tag_id: tagId
-      });
+      };
+      
+      console.log("Prepared data for insertion:", JSON.stringify(dataToInsert, null, 2));
+      
+      try {
+        const [entry] = await db
+          .insert(logEntries)
+          .values(dataToInsert)
+          .returning();
+        
+        console.log("Entry inserted successfully:", entry.id);
+        
+        // Add tags if provided
+        if (tagIds && tagIds.length > 0) {
+          console.log("Adding tags to log entry:", tagIds);
+          
+          for (const tagId of tagIds) {
+            try {
+              await this.addTagToLogEntry({
+                log_entry_id: entry.id,
+                tag_id: tagId
+              });
+            } catch (tagError) {
+              console.error(`Error adding tag ${tagId} to log entry:`, tagError);
+              // Continue with other tags even if one fails
+            }
+          }
+        }
+        
+        try {
+          const enrichedEntry = await this.enrichLogEntry(entry);
+          console.log("Log entry enriched successfully");
+          return enrichedEntry;
+        } catch (enrichError) {
+          console.error("Error enriching log entry:", enrichError);
+          // Return basic entry if enrichment fails
+          return { ...entry, tags: [], media: [] };
+        }
+      } catch (dbError) {
+        console.error("Database error inserting log entry:", dbError);
+        throw new Error(`Database insertion error: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+      }
+    } catch (error) {
+      console.error("Unexpected error in createLogEntry:", error);
+      console.error(error instanceof Error ? error.stack : "Unknown error type");
+      throw error;
     }
-    
-    return this.enrichLogEntry(entry);
   }
 
   async updateLogEntry(id: string, logEntryData: Partial<LogEntry>, tagIds?: string[]): Promise<LogEntryWithRelations | undefined> {
@@ -560,51 +640,101 @@ export class DatabaseStorage implements IStorage {
 
   // Helper method to enrich a log entry with its related data
   private async enrichLogEntry(entry: LogEntry): Promise<LogEntryWithRelations> {
-    const entryTags = await db
-      .select()
-      .from(logEntriesTags)
-      .where(eq(logEntriesTags.log_entry_id, entry.id));
-    
-    const tagIds = entryTags.map(et => et.tag_id);
-    
-    let entryTagsData: Tag[] = [];
-    // Get tags one by one instead of using the OR condition with reduce
-    if (tagIds.length > 0) {
-      for (const tagId of tagIds) {
-        const [tag] = await db
-          .select()
-          .from(tags)
-          .where(eq(tags.id, tagId));
-        
-        if (tag) {
-          entryTagsData.push(tag);
-        }
-      }
-    }
-    
-    const entryMedia = await db
-      .select()
-      .from(media)
-      .where(eq(media.log_entry_id, entry.id));
-    
-    // Get associated contact if any
-    let contactData = undefined;
-    if (entry.contact_id) {
-      const [contact] = await db
-        .select()
-        .from(contacts)
-        .where(eq(contacts.id, entry.contact_id));
+    try {
+      console.log("Starting enrichLogEntry for entry:", entry.id);
       
-      if (contact) {
-        contactData = contact;
+      // Initialize empty arrays and null values for the case of errors
+      let entryTagsData: Tag[] = [];
+      let entryMedia: Media[] = [];
+      let contactData = undefined;
+      
+      try {
+        // Get tags for this entry
+        console.log("Getting tags for log entry:", entry.id);
+        const entryTags = await db
+          .select()
+          .from(logEntriesTags)
+          .where(eq(logEntriesTags.log_entry_id, entry.id));
+        
+        const tagIds = entryTags.map(et => et.tag_id);
+        console.log(`Found ${tagIds.length} tags for log entry`);
+        
+        // Get tags one by one instead of using the OR condition with reduce
+        if (tagIds.length > 0) {
+          for (const tagId of tagIds) {
+            try {
+              const [tag] = await db
+                .select()
+                .from(tags)
+                .where(eq(tags.id, tagId));
+              
+              if (tag) {
+                entryTagsData.push(tag);
+              }
+            } catch (tagError) {
+              console.error(`Error fetching tag ${tagId}:`, tagError);
+              // Continue with other tags even if one fails
+            }
+          }
+        }
+      } catch (tagsError) {
+        console.error("Error fetching tags for log entry:", tagsError);
+        // Continue with an empty tags array
       }
+      
+      try {
+        // Get media for this entry
+        console.log("Getting media for log entry:", entry.id);
+        entryMedia = await db
+          .select()
+          .from(media)
+          .where(eq(media.log_entry_id, entry.id));
+        
+        console.log(`Found ${entryMedia.length} media items for log entry`);
+      } catch (mediaError) {
+        console.error("Error fetching media for log entry:", mediaError);
+        // Continue with an empty media array
+      }
+      
+      try {
+        // Get associated contact if any
+        if (entry.contact_id) {
+          console.log("Getting contact for log entry:", entry.id, "Contact ID:", entry.contact_id);
+          const [contact] = await db
+            .select()
+            .from(contacts)
+            .where(eq(contacts.id, entry.contact_id));
+          
+          if (contact) {
+            contactData = contact;
+            console.log("Found contact:", contact.id);
+          } else {
+            console.log("No contact found with ID:", entry.contact_id);
+          }
+        }
+      } catch (contactError) {
+        console.error("Error fetching contact for log entry:", contactError);
+        // Continue with contact as undefined
+      }
+      
+      console.log("Completed enriching log entry:", entry.id);
+      return {
+        ...entry,
+        tags: entryTagsData,
+        media: entryMedia,
+        contact: contactData
+      };
+    } catch (error) {
+      console.error("Unexpected error in enrichLogEntry:", error);
+      console.error(error instanceof Error ? error.stack : "Unknown error type");
+      
+      // In case of error, return the entry with empty arrays
+      return {
+        ...entry,
+        tags: [],
+        media: [],
+        contact: undefined
+      };
     }
-    
-    return {
-      ...entry,
-      tags: entryTagsData,
-      media: entryMedia,
-      contact: contactData
-    };
   }
 }
