@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, uuid, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -75,7 +75,7 @@ export const media = pgTable("media", {
   filename: text("filename").notNull(),
   file_key: text("file_key").notNull(), // S3 key for the file
   file_type: text("file_type").notNull(), // MIME type
-  file_size: text("file_size").notNull(), // File size in bytes
+  file_size: integer("file_size"), // File size in bytes
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });

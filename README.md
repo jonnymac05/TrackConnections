@@ -56,7 +56,7 @@ Then edit the `.env` file with your specific configuration:
 
 ```
 # Database Configuration
-DATABASE_URL=postgresql://postgres:password@localhost:5432/trackconnections
+TRACKCONNECTIONS_NEON_DB_CONNECTIONSTRING=postgresql://postgres:password@localhost:5432/trackconnections
 PGHOST=localhost
 PGPORT=5432
 PGUSER=postgres
