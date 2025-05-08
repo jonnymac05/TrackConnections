@@ -3,6 +3,7 @@ import { migrate } from 'drizzle-orm/neon-serverless/migrator';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
 import * as schema from './shared/schema';
+import 'dotenv/config';
 
 // Required for Neon serverless
 neonConfig.webSocketConstructor = ws;
@@ -53,7 +54,8 @@ async function runMigration() {
         title TEXT,
         phone TEXT,
         notes TEXT,
-        is_favorite BOOLEAN DEFAULT FALSE
+        is_favorite BOOLEAN DEFAULT FALSE,
+        where_met TEXT
       );
     `;
     
