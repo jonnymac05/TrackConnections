@@ -5,8 +5,8 @@ import { relations } from "drizzle-orm";
 
 // Users table
 export const connectUsers = pgTable("connect_users", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
+  id: text("id").primaryKey(), // Using text since the database has text type
+  name: text("name"),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   roles: text("roles").array().$defaultFn(() => []),
