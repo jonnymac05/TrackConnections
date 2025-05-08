@@ -160,14 +160,47 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log("Starting createLogEntry in database-storage with data:", JSON.stringify(logEntryData, null, 2));
       
-      // Generate a UUID for the log entry
-      const id = crypto.randomUUID();
+      // Generate UUIDs for the entries
+      const logEntryId = crypto.randomUUID();
       const now = new Date();
       
-      // Let's try a minimal dataset first to see if we can isolate the issue
+      // First, create a contact if we have contact information
+      let contactId = null;
+      if (logEntryData.name || logEntryData.email || logEntryData.phone) {
+        try {
+          console.log("Creating contact from log entry data");
+          const contactData = {
+            id: crypto.randomUUID(),
+            created_by: logEntryData.user_id,
+            name: logEntryData.name || null,
+            email: logEntryData.email || null,
+            company: logEntryData.company || null,
+            title: logEntryData.title || null,
+            phone: logEntryData.phone || null,
+            notes: logEntryData.notes || null,
+            is_favorite: logEntryData.is_favorite ?? false,
+            created_at: now,
+            updated_at: now
+          };
+          
+          const [contact] = await db
+            .insert(contacts)
+            .values(contactData)
+            .returning();
+            
+          contactId = contact.id;
+          console.log("Created contact with ID:", contactId);
+        } catch (contactError) {
+          console.error("Error creating contact:", contactError);
+          // Continue creating the log entry even if contact creation fails
+        }
+      }
+      
+      // Now create the log entry with reference to the contact if it was created
       const dataToInsert = {
-        id,
+        id: logEntryId,
         user_id: logEntryData.user_id,
+        contact_id: contactId, // Link to the contact we just created
         name: logEntryData.name || null,
         email: logEntryData.email || null,
         company: logEntryData.company || null,
@@ -176,7 +209,6 @@ export class DatabaseStorage implements IStorage {
         notes: logEntryData.notes || null,
         is_favorite: logEntryData.is_favorite ?? false,
         where_met: logEntryData.where_met || null,
-        // Explicitly exclude contact_id to test if that's causing the problem
         created_at: now,
         updated_at: now
       };
