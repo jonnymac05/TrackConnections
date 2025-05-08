@@ -95,8 +95,9 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
     if (!form.getValues("phone")) {
       form.setValue("phone", contact.phone || "");
     }
+    // Only set the where_met field if the contact has it
     if (!form.getValues("where_met") && contact.where_met) {
-      form.setValue("where_met", contact.where_met);
+      form.setValue("where_met", contact.where_met || "");
     }
     
     toast({

@@ -26,6 +26,7 @@ export const contacts = pgTable("contacts", {
   email: text("email"),
   phone: text("phone"),
   notes: text("notes"),
+  where_met: text("where_met"),
   is_favorite: boolean("is_favorite").default(false),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
@@ -34,7 +35,7 @@ export const contacts = pgTable("contacts", {
 // Log entries table
 export const logEntries = pgTable("log_entries", {
   id: uuid("id").defaultRandom().primaryKey(),
-  user_id: text("user_id").notNull().references(() => connectUsers.id), // Reference to text id in connect_users
+  user_id: text("user_id").notNull(), // Text type matching connect_users.id
   contact_id: uuid("contact_id").references(() => contacts.id),
   name: text("name"),
   company: text("company"),

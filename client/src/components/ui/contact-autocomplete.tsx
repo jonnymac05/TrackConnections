@@ -49,6 +49,16 @@ export function ContactAutocomplete({
     enabled: shouldSearch,
   });
 
+  const handleContactSelect = (contactId: string) => {
+    const selectedContact = contacts.find(contact => contact.id === contactId);
+    if (selectedContact) {
+      console.log("Selected contact:", selectedContact);
+      onContactSelect(selectedContact);
+      setSearchQuery(selectedContact.name || "");
+      setOpen(false);
+    }
+  };
+
   return (
     <div className={className}>
       <Popover open={open} onOpenChange={setOpen}>
@@ -58,6 +68,7 @@ export function ContactAutocomplete({
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between"
+            onClick={() => setOpen(!open)}
           >
             {searchQuery || "Search existing contacts..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -92,12 +103,8 @@ export function ContactAutocomplete({
                     <CommandItem
                       key={contact.id}
                       value={contact.id}
-                      onSelect={() => {
-                        onContactSelect(contact);
-                        setSearchQuery(contact.name || "");
-                        setOpen(false);
-                      }}
-                      className="flex items-center"
+                      onSelect={() => handleContactSelect(contact.id)}
+                      className="flex items-center cursor-pointer p-2 hover:bg-accent"
                     >
                       <div className="flex-1 overflow-hidden">
                         <p className="truncate font-medium">{contact.name}</p>
@@ -108,6 +115,7 @@ export function ContactAutocomplete({
                           </p>
                         )}
                       </div>
+                      <Check className="ml-2 h-4 w-4 opacity-0 data-[selected]:opacity-100" />
                     </CommandItem>
                   ))}
                 </CommandGroup>
