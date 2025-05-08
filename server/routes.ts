@@ -1,9 +1,11 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { insertLogEntrySchema, insertTagSchema, insertMessageTemplateSchema } from "@shared/schema";
+import { insertLogEntrySchema, insertTagSchema, insertMessageTemplateSchema, insertMediaSchema } from "@shared/schema";
 import { z } from "zod";
+import upload, { handleUploadErrors } from "./middlewares/upload-middleware";
+import s3Service from "./services/s3-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes (/api/register, /api/login, /api/logout, /api/user)
@@ -463,6 +465,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in /api/search/contacts:", error);
       res.status(500).json({ message: "Failed to search contacts" });
+    }
+  });
+
+  // Media Upload API
+  app.post(
+    "/api/media/upload", 
+    (req: Request, res: Response, next: NextFunction) => {
+      if (!req.isAuthenticated()) return res.sendStatus(401);
+      next();
+    },
+    upload.array('files', 5), // Accept up to 5 files
+    handleUploadErrors, // Handle upload errors
+    async (req: Request, res: Response) => {
+      try {
+        const files = req.files as Express.Multer.File[];
+        const { logEntryId } = req.body;
+        
+        if (!files || files.length === 0) {
+          return res.status(400).json({ message: "No files were uploaded" });
+        }
+        
+        // Verify log entry exists and belongs to user if logEntryId is provided
+        if (logEntryId) {
+          const logEntry = await storage.getLogEntryById(logEntryId);
+          
+          if (!logEntry) {
+            return res.status(404).json({ message: "Log entry not found" });
+          }
+          
+          if (logEntry.user_id !== req.user.id) {
+            return res.status(403).json({ message: "Not authorized to add media to this log entry" });
+          }
+        }
+        
+        // Upload each file and store metadata
+        const uploadedMedia = [];
+        
+        for (const file of files) {
+          // Only allow image files
+          if (!s3Service.isFileTypeAllowed(file.mimetype)) {
+            continue; // Skip non-image files
+          }
+          
+          // Generate a unique file key for S3
+          const fileKey = s3Service.generateFileKey(req.user.id, file.originalname);
+          
+          // Upload file to S3
+          const url = await s3Service.uploadFileToS3(
+            file.buffer,
+            fileKey,
+            file.mimetype
+          );
+          
+          // Create a media record in the database
+          const mediaData = insertMediaSchema.parse({
+            log_entry_id: logEntryId || null,
+            user_id: req.user.id,
+            url,
+            filename: file.originalname,
+            file_key: fileKey,
+            file_type: file.mimetype,
+            file_size: file.size
+          });
+          
+          const media = await storage.addMediaToLogEntry(mediaData);
+          uploadedMedia.push(media);
+        }
+        
+        res.status(201).json(uploadedMedia);
+      } catch (error) {
+        console.error('Error handling file upload:', error);
+        res.status(500).json({ 
+          message: "Failed to upload files",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  );
+  
+  // Media Delete API
+  app.delete("/api/media/:id", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // Get media item
+      const media = await storage.getMediaById(req.params.id);
+      
+      if (!media) {
+        return res.status(404).json({ message: "Media not found" });
+      }
+      
+      // Verify user owns the media
+      if (media.user_id !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized to delete this media" });
+      }
+      
+      // Delete from S3 if file_key is available
+      if (media.file_key) {
+        try {
+          await s3Service.deleteFileFromS3(media.file_key);
+        } catch (s3Error) {
+          console.error('Error deleting file from S3:', s3Error);
+          // Continue with database deletion even if S3 deletion fails
+        }
+      }
+      
+      // Delete from database
+      await storage.deleteMedia(req.params.id);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting media:', error);
+      res.status(500).json({ message: "Failed to delete media" });
     }
   });
 

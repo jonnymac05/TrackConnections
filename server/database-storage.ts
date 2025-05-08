@@ -488,6 +488,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(media.log_entry_id, logEntryId))
       .orderBy(media.created_at);
   }
+  
+  async getMediaById(id: string): Promise<Media | undefined> {
+    const [mediaItem] = await db
+      .select()
+      .from(media)
+      .where(eq(media.id, id));
+    
+    return mediaItem;
+  }
 
   async addMediaToLogEntry(mediaData: InsertMedia): Promise<Media> {
     // Generate a UUID for the media

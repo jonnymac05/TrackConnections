@@ -56,6 +56,7 @@ export interface IStorage {
   
   // Media methods
   getMediaForLogEntry(logEntryId: string): Promise<Media[]>;
+  getMediaById(id: string): Promise<Media | undefined>;
   addMediaToLogEntry(media: InsertMedia): Promise<Media>;
   deleteMedia(id: string): Promise<boolean>;
   
@@ -414,6 +415,10 @@ export class MemStorage implements IStorage {
       .sort((a, b) => {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       });
+  }
+  
+  async getMediaById(id: string): Promise<Media | undefined> {
+    return this.mediaItems.get(id);
   }
 
   async addMediaToLogEntry(mediaData: InsertMedia): Promise<Media> {
