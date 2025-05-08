@@ -25,13 +25,13 @@ async function runMigration() {
     // First, create the schema
     const createConnectUsersTable = `
       CREATE TABLE IF NOT EXISTS connect_users (
-        id TEXT PRIMARY KEY,
+        id UUID PRIMARY KEY,
         name TEXT,
         email TEXT NOT NULL,
         password TEXT NOT NULL,
         roles TEXT[] NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
         company TEXT,
         phone TEXT,
         title TEXT,
@@ -41,14 +41,31 @@ async function runMigration() {
       );
     `;
     
-    const createLogEntriesTable = `
-      CREATE TABLE IF NOT EXISTS log_entries (
-        id TEXT PRIMARY KEY,
+    const createContactsTable = `
+      CREATE TABLE IF NOT EXISTS contacts (
+        id UUID PRIMARY KEY,
         name TEXT,
         email TEXT,
-        created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        user_id TEXT NOT NULL REFERENCES connect_users(id),
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        created_by UUID NOT NULL REFERENCES connect_users(id),
+        company TEXT,
+        title TEXT,
+        phone TEXT,
+        notes TEXT,
+        is_favorite BOOLEAN DEFAULT FALSE
+      );
+    `;
+    
+    const createLogEntriesTable = `
+      CREATE TABLE IF NOT EXISTS log_entries (
+        id UUID PRIMARY KEY,
+        name TEXT,
+        email TEXT,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        user_id UUID NOT NULL REFERENCES connect_users(id),
+        contact_id UUID REFERENCES contacts(id),
         company TEXT,
         title TEXT,
         phone TEXT,
@@ -60,41 +77,41 @@ async function runMigration() {
     
     const createTagsTable = `
       CREATE TABLE IF NOT EXISTS tags (
-        id TEXT PRIMARY KEY,
+        id UUID PRIMARY KEY,
         name TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        user_id TEXT NOT NULL REFERENCES connect_users(id),
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        user_id UUID NOT NULL REFERENCES connect_users(id),
         color TEXT
       );
     `;
     
     const createLogEntriesTagsTable = `
       CREATE TABLE IF NOT EXISTS log_entries_tags (
-        id TEXT PRIMARY KEY,
-        log_entry_id TEXT NOT NULL REFERENCES log_entries(id),
-        tag_id TEXT NOT NULL REFERENCES tags(id),
-        created_at TIMESTAMP WITH TIME ZONE NOT NULL
+        id UUID PRIMARY KEY,
+        log_entry_id UUID NOT NULL REFERENCES log_entries(id),
+        tag_id UUID NOT NULL REFERENCES tags(id),
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
       );
     `;
     
     const createMediaTable = `
       CREATE TABLE IF NOT EXISTS media (
-        id TEXT PRIMARY KEY,
+        id UUID PRIMARY KEY,
         url TEXT NOT NULL,
         type TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        log_entry_id TEXT NOT NULL REFERENCES log_entries(id)
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        log_entry_id UUID NOT NULL REFERENCES log_entries(id)
       );
     `;
     
     const createMessageTemplatesTable = `
       CREATE TABLE IF NOT EXISTS message_templates (
-        id TEXT PRIMARY KEY,
-        created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        user_id TEXT NOT NULL REFERENCES connect_users(id),
+        id UUID PRIMARY KEY,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        user_id UUID NOT NULL REFERENCES connect_users(id),
         email_template TEXT,
         sms_template TEXT
       );
@@ -112,6 +129,8 @@ async function runMigration() {
     // Execute the CREATE TABLE statements in order
     await pool.query(createConnectUsersTable);
     console.log('- Created connect_users table');
+    await pool.query(createContactsTable);
+    console.log('- Created contacts table');
     await pool.query(createLogEntriesTable);
     console.log('- Created log_entries table');
     await pool.query(createTagsTable);
