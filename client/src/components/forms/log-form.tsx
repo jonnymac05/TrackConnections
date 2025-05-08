@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TagInput } from "@/components/ui/tag-input";
 import { MediaUpload } from "@/components/media-upload";
-import { LogEntryWithRelations, Tag, insertLogEntrySchema } from "@shared/schema";
+import { ContactAutocomplete } from "@/components/ui/contact-autocomplete";
+import { LogEntryWithRelations, Tag, Contact, insertLogEntrySchema } from "@shared/schema";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,7 @@ const logFormSchema = z.object({
   where_met: z.string().optional(),
   notes: z.string().optional(),
   is_favorite: z.boolean().default(false),
+  contact_id: z.string().optional(),
 });
 
 type LogFormValues = z.infer<typeof logFormSchema>;
@@ -39,6 +41,7 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
   const { toast } = useToast();
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(logEntry?.contact || null);
   
   // Fetch available tags
   const { data: tags = [] } = useQuery<Tag[]>({
@@ -57,6 +60,7 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
       where_met: logEntry?.where_met || "",
       notes: logEntry?.notes || "",
       is_favorite: logEntry?.is_favorite || false,
+      contact_id: logEntry?.contact_id || undefined,
     },
   });
   
@@ -65,7 +69,41 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
     if (logEntry?.tags) {
       setSelectedTags(logEntry.tags);
     }
+    if (logEntry?.contact) {
+      setSelectedContact(logEntry.contact);
+    }
   }, [logEntry]);
+  
+  // Handle contact selection from autocomplete
+  const handleContactSelect = (contact: Contact) => {
+    setSelectedContact(contact);
+    form.setValue("contact_id", contact.id);
+    
+    // Populate form fields with contact data if they're empty
+    if (!form.getValues("name")) {
+      form.setValue("name", contact.name || "");
+    }
+    if (!form.getValues("company")) {
+      form.setValue("company", contact.company || "");
+    }
+    if (!form.getValues("title")) {
+      form.setValue("title", contact.title || "");
+    }
+    if (!form.getValues("email")) {
+      form.setValue("email", contact.email || "");
+    }
+    if (!form.getValues("phone")) {
+      form.setValue("phone", contact.phone || "");
+    }
+    if (!form.getValues("where_met") && contact.where_met) {
+      form.setValue("where_met", contact.where_met);
+    }
+    
+    toast({
+      title: "Contact Selected",
+      description: `Form populated with data from ${contact.name}`,
+    });
+  };
   
   // Create tag mutation
   const createTagMutation = useMutation({
@@ -88,8 +126,6 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
   // Save log entry mutation
   const saveLogEntryMutation = useMutation({
     mutationFn: async (data: LogFormValues) => {
-      const formData = new FormData();
-      
       // Base log entry data
       const logEntryData = {
         ...data,
@@ -115,6 +151,7 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/log-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       toast({
         title: "Success",
         description: logEntry ? "Log entry updated" : "Log entry created",
@@ -156,6 +193,35 @@ export function LogForm({ logEntry, onSuccess, user_id }: LogFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-4">
+        {/* Contact Autocomplete */}
+        <div className="mb-4">
+          <FormLabel>Search Existing Contacts</FormLabel>
+          <ContactAutocomplete 
+            onContactSelect={handleContactSelect}
+            className="mt-1"
+          />
+          {selectedContact && (
+            <div className="mt-2 p-2 bg-muted rounded-md text-sm">
+              <p className="font-medium">Selected contact: {selectedContact.name}</p>
+              {selectedContact.company && (
+                <p className="text-muted-foreground">
+                  {selectedContact.company}
+                  {selectedContact.title && ` • ${selectedContact.title}`}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Hidden Contact ID field */}
+        <FormField
+          control={form.control}
+          name="contact_id"
+          render={({ field }) => (
+            <input type="hidden" {...field} />
+          )}
+        />
+        
         <FormField
           control={form.control}
           name="name"
