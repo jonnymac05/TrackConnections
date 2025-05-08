@@ -164,35 +164,66 @@ export class DatabaseStorage implements IStorage {
       const logEntryId = crypto.randomUUID();
       const now = new Date();
       
-      // First, create a contact if we have contact information
-      let contactId = null;
-      if (logEntryData.name || logEntryData.email || logEntryData.phone) {
+      // First, check if we have a contact or need to create one
+      let contactId = logEntryData.contact_id || null;
+      
+      // If a contact ID wasn't provided but we have contact info, try to find or create a contact
+      if (!contactId && (logEntryData.name || logEntryData.email || logEntryData.phone)) {
         try {
-          console.log("Creating contact from log entry data");
-          const contactData = {
-            id: crypto.randomUUID(),
-            created_by: logEntryData.user_id,
-            name: logEntryData.name || null,
-            email: logEntryData.email || null,
-            company: logEntryData.company || null,
-            title: logEntryData.title || null,
-            phone: logEntryData.phone || null,
-            notes: logEntryData.notes || null,
-            is_favorite: logEntryData.is_favorite ?? false,
-            created_at: now,
-            updated_at: now
-          };
+          console.log("Checking for existing contacts with matching email or phone");
           
-          const [contact] = await db
-            .insert(contacts)
-            .values(contactData)
-            .returning();
+          // Build a query to find existing contacts
+          let query = db
+            .select()
+            .from(contacts)
+            .where(eq(contacts.created_by, logEntryData.user_id));
+          
+          // Add email condition if provided
+          if (logEntryData.email) {
+            query = query.where(eq(contacts.email, logEntryData.email));
+          } 
+          // If no email, try phone number if provided
+          else if (logEntryData.phone) {
+            query = query.where(eq(contacts.phone, logEntryData.phone));
+          }
+          
+          // Execute the query
+          const existingContacts = await query;
+          console.log(`Found ${existingContacts.length} existing contacts`);
+          
+          if (existingContacts.length > 0) {
+            // Use the first matching contact
+            contactId = existingContacts[0].id;
+            console.log("Using existing contact with ID:", contactId);
+          } else {
+            // No match found, create a new contact
+            console.log("No matching contact found, creating new contact");
+            const contactData = {
+              id: crypto.randomUUID(),
+              created_by: logEntryData.user_id,
+              name: logEntryData.name || null,
+              email: logEntryData.email || null,
+              company: logEntryData.company || null,
+              title: logEntryData.title || null,
+              phone: logEntryData.phone || null,
+              notes: logEntryData.notes || null,
+              where_met: logEntryData.where_met || null,
+              is_favorite: logEntryData.is_favorite ?? false,
+              created_at: now,
+              updated_at: now
+            };
             
-          contactId = contact.id;
-          console.log("Created contact with ID:", contactId);
+            const [contact] = await db
+              .insert(contacts)
+              .values(contactData)
+              .returning();
+              
+            contactId = contact.id;
+            console.log("Created new contact with ID:", contactId);
+          }
         } catch (contactError) {
-          console.error("Error creating contact:", contactError);
-          // Continue creating the log entry even if contact creation fails
+          console.error("Error finding/creating contact:", contactError);
+          // Continue creating the log entry even if contact handling fails
         }
       }
       
